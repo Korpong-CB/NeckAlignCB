@@ -330,26 +330,31 @@ col_cam, col_info = st.columns([3, 2])
 with col_cam:
     st.markdown("### 📹 กล้องตรวจจับและคำนวณเวกเตอร์ 3D")
     ctx = webrtc_streamer(
-        key="neck-align-stream", 
+        key="neck-align-stream",
+        mode=WebRtcMode.SENDRECV,
         video_processor_factory=VideoProcessor,
         rtc_configuration={
             "iceServers": [
                 {"urls": ["stun:stun.l.google.com:19302"]},
-                {"urls": ["stun:global.stun.twilio.com:3478"]},
+                {"urls": ["stun:stun1.l.google.com:19302"]},
                 {
-                    "urls": "turn:openrelay.metered.ca:80",
-                    "username": "openrelayproject",
-                    "credential": "openrelayproject"
-                },
-                {
-                    "urls": "turn:openrelay.metered.ca:443",
+                    "urls": [
+                        "turn:openrelay.metered.ca:80",
+                        "turn:openrelay.metered.ca:443",
+                        "turn:openrelay.metered.ca:443?transport=tcp"
+                    ],
                     "username": "openrelayproject",
                     "credential": "openrelayproject"
                 }
             ]
         },
         media_stream_constraints={
-            "video": True,   # ให้เบราว์เซอร์ของ iPad เลือกขนาดกล้องที่เหมาะสมที่สุดโดยอัตโนมัติ
+            "video": {
+                "facingMode": "user",
+                "width": {"ideal": 480},
+                "height": {"ideal": 360},
+                "frameRate": {"max": 15}
+            },
             "audio": False
         },
         async_processing=True
