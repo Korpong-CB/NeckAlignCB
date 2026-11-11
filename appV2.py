@@ -332,8 +332,27 @@ with col_cam:
     ctx = webrtc_streamer(
         key="neck-align-stream", 
         video_processor_factory=VideoProcessor,
-        rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
-        media_stream_constraints={"video": True, "audio": False}
+        rtc_configuration={
+            "iceServers": [
+                {"urls": ["stun:stun.l.google.com:19302"]},
+                {"urls": ["stun:global.stun.twilio.com:3478"]},
+                {
+                    "urls": "turn:openrelay.metered.ca:80",
+                    "username": "openrelayproject",
+                    "credential": "openrelayproject"
+                },
+                {
+                    "urls": "turn:openrelay.metered.ca:443",
+                    "username": "openrelayproject",
+                    "credential": "openrelayproject"
+                }
+            ]
+        },
+        media_stream_constraints={
+            "video": True,   # ให้เบราว์เซอร์ของ iPad เลือกขนาดกล้องที่เหมาะสมที่สุดโดยอัตโนมัติ
+            "audio": False
+        },
+        async_processing=True
     )
     
     col_btn1, col_btn2 = st.columns([2, 1])
