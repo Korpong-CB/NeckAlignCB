@@ -1,7 +1,6 @@
 streamlit
 streamlit-webrtc
 opencv-python-headless
-mediapipe==0.10.14
-protobuf==4.25.3
+mediapipe
+protobuf<=4.25.3
 plotly
-numpy<2.0.0
