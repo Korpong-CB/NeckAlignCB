@@ -57,9 +57,9 @@ with col_logo:
 with col_title:
     st.markdown("""
         <div class="main-header">
-            <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>📐 โครงงานคณิตศาสตร์: Neck Align</h2>
+            <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>📐 โครงงาน Neck อะไร</h2>
             <p style='margin:6px 0 0 0; font-size:15px; color:#e0f2fe;'>
-                ระบบตรวจวัดและวิเคราะห์มุมกระดูกคอ (CVA) อัตโนมัติ พร้อม <b>การจำลองกระดูกสันหลังส่วนคอ C1–C7 ในปริภูมิ 3 มิติ</b>
+                ระบบตรวจวัดและวิเคราะห์มุมกระดูกคอ (CVA) อัตโนมัติ พร้อมการจำลองกระดูกสันหลังส่วนคอ C1–C7 ในปริภูมิ 3 มิติ
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -400,7 +400,7 @@ with col_cam:
                 st.warning("⚠️ กรุณากดปุ่ม START เพื่อเปิดกล้องก่อนกดบันทึกภาพครับ")
 
     with tab_upload:
-        st.info("💡 **วิธีใช้บน iPad:** กดปุ่ม **Browse files** ด้านล่าง -> เลือก **ถ่ายภาพ (Take Photo)** หรือ **คลังรูปภาพ (Photo Library)** เพื่อวิเคราะห์มุมคอทันทีโดยไม่ค้างครับ")
+        st.info("💡 **วิธีใช้บน iPad:** กดปุ่ม **Browse files** ด้านล่าง -> เลือก **ถ่ายภาพ (Take Photo)** หรือ **คลังรูปภาพ (Photo Library)** เพื่อวิเคราะห์มุมคอทันที")
         uploaded_file = st.file_uploader(
             "📤 กดปุ่มเพื่อถ่ายภาพจากกล้อง iPad หรือเลือกรูปภาพด้านข้างจากอัลบั้ม", 
             type=["jpg", "jpeg", "png", "webp"]
@@ -486,25 +486,24 @@ with col_info:
         st.latex(r"\theta = \arctan2(\Delta y, \Delta x) \times \left(\frac{180^\circ}{\pi}\right)")
 
 st.markdown("---")
-st.markdown("### 🎓 ข้อมูลโครงงานและคณะผู้จัดทำ")
 
 col_students, col_advisors = st.columns(2)
 with col_students:
     with st.container(border=True):
         st.markdown("#### 👥 นักเรียนผู้จัดทำโครงงาน")
         st.markdown("""
-        1. **นางสาวทัดหทัย เดชหัสดิน** `ชั้น ม.5/13`
-        2. **นายเมธาสิทธิ์ สัมฤทธิ์** `ชั้น ม.5/13`
-        3. **นายปณพนธ์ วิระรังษิยากรณ์** `ชั้น ม.5/13`
+        1. **นางสาวทัดหทัย เดชหัสดิน** ชั้น ม.5/13
+        2. **นายเมธาสิทธิ์ สัมฤทธิ์** ชั้น ม.5/13
+        3. **นายปณพนธ์ วิระรังษิยากรณ์** ชั้น ม.5/13
         """)
 
 with col_advisors:
     with st.container(border=True):
-        st.markdown("#### 👨‍🏫 คณะครูที่ปรึกษาโครงงาน")
+        st.markdown("#### 👨‍🏫 ครูที่ปรึกษาโครงงาน")
         st.markdown("""
-        * 🔹 **นางสาวกัญจณ์วรา โนราช** *(ครูที่ปรึกษา)*
-        * 🔹 **นายก่อพงศ์ ภูมิภักดี** *(ครูที่ปรึกษา)*
+        * 🔹 **นางสาวกัญจณ์วรา โนราช**
+        * 🔹 **นายก่อพงศ์ ภูมิภักดี**
         """)
 
 with st.container(border=True):
-    st.markdown("<center>🏫 กลุ่มสาระการเรียนรู้คณิตศาสตร์ • <b>โรงเรียนชัยภูมิภักดีชุมพล</b></center>", unsafe_allow_html=True)
+    st.markdown("<center>🏫 กลุ่มสาระการเรียนรู้คณิตศาสตร์ • โรงเรียนชัยภูมิภักดีชุมพล</center>", unsafe_allow_html=True)
