@@ -271,4 +271,243 @@ def analyze_and_draw_posture(img, pose_model):
                 status_str, risk_str, color, stat_val = "SEVERE FORWARD HEAD", "Risk: HIGH (Text Neck)", (239, 68, 68), "คอยื่นรุนแรง (Severe FHP)"
 
             # === ฝั่งซ้ายของ HUD: ผลวิเคราะห์ทางการแพทย์ (CVA) ===
-   
+            put_crisp_text(img, f"CVA: {cva_angle:.1f} deg", (20, 38), cv2.FONT_HERSHEY_DUPLEX, 1.0, (255, 255, 255), 2, shadow_thickness=4)
+            put_crisp_text(img, status_str, (20, 74), cv2.FONT_HERSHEY_DUPLEX, 0.65, color, 2, shadow_thickness=3)
+            put_crisp_text(img, risk_str, (20, 102), cv2.FONT_HERSHEY_SIMPLEX, 0.52, color, 1, shadow_thickness=3)
+
+            # === ฝั่งขวาของ HUD: ข้อมูลเวกเตอร์ 3D และทิศทาง ===
+            right_x = mid_x + 20
+            put_crisp_text(img, f"3D Vector v = [{dx}, {dy}, {dz}]", (right_x, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (56, 189, 248), 2, shadow_thickness=3)
+            put_crisp_text(img, f"||v|| = {mag_3d} px", (right_x, 74), cv2.FONT_HERSHEY_SIMPLEX, 0.60, (241, 245, 249), 1, shadow_thickness=3)
+            put_crisp_text(img, side_label, (right_x, 102), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (148, 163, 184), 1, shadow_thickness=3)
+
+            # === วาดแกนพิกัด X, Y, Z ที่จุด C7 (พร้อม Anti-Aliasing และ Badge คมชัด) ===
+            axis_len = 80
+            ax_x = (sh_px + int(axis_len * x_dir), sh_py)
+            ax_y = (sh_px, sh_py - axis_len)
+            ax_z = (sh_px - int(axis_len * 0.6 * x_dir), sh_py + int(axis_len * 0.4))
+
+            cv2.arrowedLine(img, p_c7, ax_x, (80, 80, 240), 2, cv2.LINE_AA, tipLength=0.15)
+            put_crisp_text(img, "X", (ax_x[0] + 6 * x_dir, ax_x[1] + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (80, 80, 240), 1)
+
+            cv2.arrowedLine(img, p_c7, ax_y, (80, 240, 80), 2, cv2.LINE_AA, tipLength=0.15)
+            put_crisp_text(img, "Y", (ax_y[0] - 16, ax_y[1] - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (80, 240, 80), 1)
+
+            cv2.arrowedLine(img, p_c7, ax_z, (240, 180, 60), 2, cv2.LINE_AA, tipLength=0.15)
+            put_crisp_text(img, "Z", (ax_z[0] - 16, ax_z[1] + 16), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (240, 180, 60), 1)
+
+            # เส้นประโปรเจกต์มิติ 3 มิติ
+            p_floor = (ear_px, sh_py)
+            draw_dashed_line(img, p_ear, p_floor, (220, 220, 220), 1, gap=5)
+            draw_dashed_line(img, p_c7, p_floor, (140, 180, 220), 1, gap=5)
+
+            # เวกเตอร์ u (สีเขียวคมชัด)
+            ref_x = sh_px + (125 * x_dir)
+            cv2.arrowedLine(img, p_c7, (ref_x, sh_py), (34, 197, 94), 3, cv2.LINE_AA, tipLength=0.15)
+            draw_badge_label(img, "u [1,0,0]", (ref_x - (10 if x_dir > 0 else 55), sh_py + 26), text_color=(34, 197, 94), bg_color=(15, 23, 42), fontScale=0.45)
+
+            # เวกเตอร์ v (สีทองคมชัด)
+            cv2.arrowedLine(img, p_c7, p_ear, (0, 215, 255), 4, cv2.LINE_AA, tipLength=0.12)
+            draw_badge_label(img, f"v ({dx},{dy},{dz})", (ear_px + 12, ear_py), text_color=(0, 215, 255), bg_color=(15, 23, 42), fontScale=0.45)
+
+            # ส่วนโค้งมุม CVA
+            start_angle = 0 if x_dir > 0 else 180
+            end_angle = -int(cva_angle) if x_dir > 0 else 180 + int(cva_angle)
+            cv2.ellipse(img, p_c7, (45, 45), 0, start_angle, end_angle, (255, 255, 255), 2, cv2.LINE_AA)
+
+            # จุด Marker C7, Ear และ Floor
+            cv2.circle(img, p_c7, 7, (0, 0, 255), -1, cv2.LINE_AA)
+            cv2.circle(img, p_ear, 7, (255, 120, 0), -1, cv2.LINE_AA)
+            cv2.circle(img, p_floor, 4, (180, 180, 180), -1, cv2.LINE_AA)
+            
+            # ป้าย Badge จุดกำเนิด C7
+            draw_badge_label(img, "C7 Origin (0,0,0)", (p_c7[0] - 45, p_c7[1] + 34), text_color=(255, 255, 255), bg_color=(15, 23, 42), fontScale=0.42)
+
+        else:
+            put_crisp_text(img, "Please turn side to camera clearly", (25, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 215, 255), 2, shadow_thickness=4)
+    else:
+        put_crisp_text(img, "Detecting posture... Please step into frame", (25, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (220, 220, 220), 2, shadow_thickness=4)
+
+    return img, cva_val, stat_val, vec_val, mag_val
+
+# 4. คลาส VideoProcessor สำหรับโหมด WebRTC (ใช้กับคอมพิวเตอร์)
+class VideoProcessor:
+    def __init__(self):
+        self.mp_pose = mp.solutions.pose
+        self.pose = self.mp_pose.Pose(
+            static_image_mode=False,
+            model_complexity=1,
+            smooth_landmarks=True,
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5
+        )
+        self.latest_frame = None
+        self.latest_cva = None
+        self.latest_status = None
+        self.latest_vec = None
+        self.latest_mag = None
+
+    def recv(self, frame):
+        img = frame.to_ndarray(format="bgr24")
+        img = cv2.flip(img, 1)
+        img, cva_val, stat_val, vec_val, mag_val = analyze_and_draw_posture(img, self.pose)
+
+        self.latest_frame = img.copy()
+        self.latest_cva = cva_val
+        self.latest_status = stat_val
+        self.latest_vec = vec_val
+        self.latest_mag = mag_val
+
+        return av.VideoFrame.from_ndarray(img, format="bgr24")
+
+# 5. การจัดวาง Layout แบ่ง 2 คอลัมน์
+col_cam, col_info = st.columns([3, 2])
+
+with col_cam:
+    st.markdown("### 📸 ระบบรับภาพและคำนวณเวกเตอร์ 3D")
+    
+    tab_live, tab_upload = st.tabs([
+        "💻 โหมดกล้องวิดีโอสด (Live Camera)", 
+        "📱 โหมดอัปโหลด / ถ่ายภาพ (สำหรับ iPad & มือถือ)"
+    ])
+
+    with tab_live:
+        ctx = webrtc_streamer(
+            key="neck-align-stream",
+            mode=WebRtcMode.SENDRECV,
+            video_processor_factory=VideoProcessor,
+            rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
+            media_stream_constraints={"video": True, "audio": False},
+            async_processing=True
+        )
+        
+        if st.button("📸 บันทึกภาพจากกล้องสดและอัปเดตโมเดล 3D", use_container_width=True, type="primary"):
+            if ctx.video_processor and ctx.video_processor.latest_frame is not None:
+                vp = ctx.video_processor
+                if vp.latest_cva is not None:
+                    record = {
+                        "time": datetime.now().strftime("%H:%M:%S"),
+                        "img": cv2.cvtColor(vp.latest_frame, cv2.COLOR_BGR2RGB),
+                        "cva": vp.latest_cva,
+                        "status": vp.latest_status,
+                        "vec": vp.latest_vec,
+                        "mag": vp.latest_mag
+                    }
+                    st.session_state.captured_records.insert(0, record)
+                    st.session_state.active_vec = vp.latest_vec
+                    st.session_state.active_cva = vp.latest_cva
+                    st.toast("✅ บันทึกภาพและจำลองแนวกระดูกคอ C1–C7 สำเร็จ!", icon="🦴")
+                else:
+                    st.warning("⚠️ กล้องเปิดอยู่แต่ยังตรวจไม่พบมุมคอ กรุณาหันข้างเข้าหากล้องให้ชัดเจนครับ")
+            else:
+                st.warning("⚠️ กรุณากดปุ่ม START เพื่อเปิดกล้องก่อนกดบันทึกภาพครับ")
+
+    with tab_upload:
+        st.info("💡 **วิธีใช้บน iPad:** กดปุ่ม **Browse files** ด้านล่าง -> เลือก **ถ่ายภาพ (Take Photo)** หรือ **คลังรูปภาพ (Photo Library)** เพื่อวิเคราะห์มุมคอทันทีโดยไม่ค้างครับ")
+        uploaded_file = st.file_uploader(
+            "📤 กดปุ่มเพื่อถ่ายภาพจากกล้อง iPad หรือเลือกรูปภาพด้านข้างจากอัลบั้ม", 
+            type=["jpg", "jpeg", "png", "webp"]
+        )
+        
+        if uploaded_file is not None:
+            bytes_data = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+            cv2_img = cv2.imdecode(bytes_data, cv2.IMREAD_COLOR)
+            
+            if cv2_img is not None:
+                max_dim = 1080  # ปรับเพิ่มความละเอียดให้ภาพคมชัดยิ่งขึ้น
+                h_orig, w_orig = cv2_img.shape[:2]
+                if max(h_orig, w_orig) > max_dim:
+                    scale = max_dim / max(h_orig, w_orig)
+                    cv2_img = cv2.resize(cv2_img, (int(w_orig * scale), int(h_orig * scale)), interpolation=cv2.INTER_AREA)
+
+                pose_model = get_static_pose_model()
+                processed_img, cva_val, stat_val, vec_val, mag_val = analyze_and_draw_posture(cv2_img, pose_model)
+                
+                if cva_val is not None:
+                    st.session_state.active_vec = vec_val
+                    st.session_state.active_cva = cva_val
+                    
+                    rgb_out = cv2.cvtColor(processed_img, cv2.COLOR_BGR2RGB)
+                    st.image(rgb_out, caption=f"✅ วิเคราะห์สำเร็จ: มุม CVA = {cva_val}° ({stat_val})", use_column_width=True)
+                    
+                    if st.button("💾 บันทึกผลวิเคราะห์นี้ลงรายการเปรียบเทียบด้านล่าง", type="primary", use_container_width=True):
+                        record = {
+                            "time": datetime.now().strftime("%H:%M:%S"),
+                            "img": rgb_out,
+                            "cva": cva_val,
+                            "status": stat_val,
+                            "vec": vec_val,
+                            "mag": mag_val
+                        }
+                        st.session_state.captured_records.insert(0, record)
+                        st.toast("✅ บันทึกภาพและจำลองแนวกระดูกคอ C1–C7 สำเร็จ!", icon="🦴")
+                else:
+                    st.error("⚠️ ตรวจไม่พบจุดหูและไหล่ที่ชัดเจน กรุณาใช้ภาพถ่ายที่หันด้านข้างให้เห็นช่วงศีรษะและหัวไหล่ชัดเจนครับ")
+
+    if len(st.session_state.captured_records) > 0:
+        st.markdown("---")
+        col_gal_title, col_gal_del = st.columns([3, 1])
+        with col_gal_title:
+            st.markdown(f"#### 📋 ภาพที่บันทึกผล ({len(st.session_state.captured_records)} รายการล่าสุด)")
+        with col_gal_del:
+            if st.button("🗑️ ล้างประวัติ", use_container_width=True):
+                st.session_state.captured_records = []
+                st.rerun()
+
+        cols_snap = st.columns(min(len(st.session_state.captured_records), 2))
+        for idx, rec in enumerate(st.session_state.captured_records):
+            target_col = cols_snap[idx % 2]
+            with target_col:
+                with st.container(border=True):
+                    st.image(rec["img"], use_column_width=True)
+                    st.markdown(f"⏱️ **เวลา:** `{rec['time']}` | **CVA:** `{rec['cva']}°`")
+                    st.markdown(f"🩺 **ผล:** `{rec['status']}`")
+                    st.caption(f"📐 3D v: {rec['vec']} | ||v||: {rec['mag']} px")
+
+with col_info:
+    st.markdown("### 🦴 แบบจำลองกระดูกสันหลังส่วนคอ 3 มิติ (C1–C7)")
+    st.caption("💡 *คลิกเมาส์ค้างหรือใช้นิ้วแตะเพื่อหมุนดูแนวกระดูก C1-C7 และเวกเตอร์ u, v ได้รอบทิศทาง 360°*")
+    with st.container(border=True):
+        fig_spine = create_interactive_3d_spine_plot(st.session_state.active_vec, st.session_state.active_cva)
+        st.plotly_chart(fig_spine, use_container_width=True)
+
+    st.markdown("### 📊 เกณฑ์การประเมินทางการแพทย์ (CVA)")
+    st.success("🟢 **ตั้งแต่ 50.0° ขึ้นไป: ปกติ (Normal Posture)**\n\nแนวกระดูกคอสมดุล กล้ามเนื้อต้นคอรับภาระน้ำหนักศีรษะในเกณฑ์ปกติ (4.5 - 5.5 กก.)")
+    st.warning("🟠 **40.0° - 49.9°: คอยื่นระดับเริ่มต้น (Mild FHP)**\n\nเริ่มมีอาการ Forward Head Posture กล้ามเนื้อบ่าและกระดูกคอเริ่มรับแรงเค้นเพิ่มขึ้น ควรยืดเหยียด")
+    st.error("🔴 **ต่ำกว่า 40.0°: คอยื่นระดับรุนแรง (Severe FHP)**\n\nเสี่ยงต่อภาวะ Text Neck Syndrome กระดูกคอรับน้ำหนักเสมือนสูงถึง 18 - 27 กก. อาจเกิดอาการปวดเรื้อรัง")
+
+    st.markdown("---")
+    st.markdown("### 🧮 หลักการคณิตศาสตร์ที่ใช้ในโปรแกรม")
+    with st.container(border=True):
+        st.markdown("**1. ระบบพิกัดฉาก 3 มิติ (3D Coordinate Frame)**")
+        st.caption("กำหนดจุดกระดูกคอ C7 เป็นจุดกำเนิด $O(0,0,0)$ มีแกน $X$ (แนวราบ), $Y$ (แนวดิ่ง), $Z$ (ความลึก)")
+        st.markdown(r"**2. เวกเตอร์ระนาบอ้างอิง ($\vec{u}$) และเวกเตอร์แนวกระดูกคอ ($\vec{v}$)**")
+        st.latex(r"\vec{u} = \begin{bmatrix} 1 \\ 0 \\ 0 \end{bmatrix}, \quad \vec{v} = \begin{bmatrix} \Delta x \\ \Delta y \\ \Delta z \end{bmatrix} = \begin{bmatrix} x_{ear} - x_{c7} \\ y_{c7} - y_{ear} \\ z_{ear} - z_{c7} \end{bmatrix}")
+        st.markdown(r"**3. ขนาดของเวกเตอร์ 3 มิติ (Magnitude $\|\vec{v}\|$)**")
+        st.latex(r"\|\vec{v}\| = \sqrt{(\Delta x)^2 + (\Delta y)^2 + (\Delta z)^2}")
+        st.markdown(r"**4. การคำนวณมุม Craniovertebral Angle (CVA) ด้วยตรีโกณมิติ**")
+        st.latex(r"\theta = \arctan2(\Delta y, \Delta x) \times \left(\frac{180^\circ}{\pi}\right)")
+
+st.markdown("---")
+st.markdown("### 🎓 ข้อมูลโครงงานและคณะผู้จัดทำ")
+
+col_students, col_advisors = st.columns(2)
+with col_students:
+    with st.container(border=True):
+        st.markdown("#### 👥 นักเรียนผู้จัดทำโครงงาน")
+        st.markdown("""
+        1. **นางสาวทัดหทัย เดชหัสดิน** `ชั้น ม.5/13`
+        2. **นายเมธาสิทธิ์ สัมฤทธิ์** `ชั้น ม.5/13`
+        3. **นายปณพนธ์ วิระรังษิยากรณ์** `ชั้น ม.5/13`
+        """)
+
+with col_advisors:
+    with st.container(border=True):
+        st.markdown("#### 👨‍🏫 คณะครูที่ปรึกษาโครงงาน")
+        st.markdown("""
+        * 🔹 **นางสาวกัญจณ์วรา โนราช** *(ครูที่ปรึกษา)*
+        * 🔹 **นายก่อพงศ์ ภูมิภักดี** *(ครูที่ปรึกษา)*
+        """)
+
+with st.container(border=True):
+    st.markdown("<center>🏫 กลุ่มสาระการเรียนรู้คณิตศาสตร์ • <b>โรงเรียนชัยภูมิภักดีชุมพล</b></center>", unsafe_allow_html=True)
