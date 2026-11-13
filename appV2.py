@@ -59,7 +59,7 @@ with col_title:
         <div class="main-header">
             <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>📐 โครงงาน Neck อะไร</h2>
             <p style='margin:6px 0 0 0; font-size:15px; color:#e0f2fe;'>
-                ระบบตรวจวัดและวิเคราะห์มุมกระดูกคอ (CVA) อัตโนมัติ พร้อม การจำลองกระดูกสันหลังส่วนคอ C1–C7 ในปริภูมิ 3 มิติ
+               ระบบตรวจวัดและวิเคราะห์มุมกระดูกคอ (CVA) อัตโนมัติ พร้อม การจำลองกระดูกสันหลังส่วนคอ C1–C7 ในปริภูมิ 3 มิติ
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -178,9 +178,7 @@ def create_interactive_3d_spine_plot(vec, cva_angle):
 
 # ฟังก์ชันเขียนตัวหนังสือคมชัดสูง (มีเงาขอบดำลบรอยหยักด้วย cv2.LINE_AA)
 def put_crisp_text(img, text, org, fontFace, fontScale, color, thickness=1, shadow_color=(0, 0, 0), shadow_thickness=3):
-    # วาดเงาขอบสีดำรอบทิศทางเพื่อความคมชัด
     cv2.putText(img, text, org, fontFace, fontScale, shadow_color, shadow_thickness, cv2.LINE_AA)
-    # วาดตัวหนังสือสีจริงทับด้านหน้า
     cv2.putText(img, text, org, fontFace, fontScale, color, thickness, cv2.LINE_AA)
 
 # ฟังก์ชันวาดป้ายข้อความพร้อมพื้นหลัง (Badge/Pill)
@@ -189,11 +187,8 @@ def draw_badge_label(img, text, org, text_color=(255, 255, 255), bg_color=(15, 2
     (tw, th), baseline = cv2.getTextSize(text, font, fontScale, thickness)
     x, y = org
     pad_x, pad_y = 6, 4
-    # กล่องพื้นหลังทึบ
     cv2.rectangle(img, (x - pad_x, y - th - pad_y), (x + tw + pad_x, y + baseline + pad_y - 2), bg_color, -1)
-    # ขอบกล่องบาง
     cv2.rectangle(img, (x - pad_x, y - th - pad_y), (x + tw + pad_x, y + baseline + pad_y - 2), (71, 85, 105), 1, cv2.LINE_AA)
-    # ตัวหนังสือ
     cv2.putText(img, text, (x, y), font, fontScale, text_color, thickness, cv2.LINE_AA)
 
 # ฟังก์ชันวาดเส้นประใน OpenCV แบบคมชัด
@@ -215,17 +210,13 @@ def analyze_and_draw_posture(img, pose_model):
     rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     results = pose_model.process(rgb_img)
 
-    # 1. สร้างแถบ HUD คมชัดสูงแบบ High-Contrast Dark Theme
     hud_h = 118
-    # วาดพื้นหลังแถบ HUD มืดสนิท 95% เพื่อตัดแสงสะท้อนและไม่ให้มี Noise
     hud_overlay = img.copy()
     cv2.rectangle(hud_overlay, (0, 0), (w, hud_h), (10, 15, 29), -1)
     img = cv2.addWeighted(hud_overlay, 0.94, img, 0.06, 0)
     
-    # เส้นแบ่งล่างของแถบ HUD
     cv2.line(img, (0, hud_h), (w, hud_h), (56, 189, 248), 2, cv2.LINE_AA)
     
-    # เส้นแบ่งกลางแนวตั้ง
     mid_x = w // 2
     cv2.line(img, (mid_x, 10), (mid_x, hud_h - 10), (51, 65, 85), 1, cv2.LINE_AA)
 
@@ -262,16 +253,22 @@ def analyze_and_draw_posture(img, pose_model):
             p_c7 = (sh_px, sh_py)
             p_ear = (ear_px, ear_py)
 
-            # กำหนดสถานะและสี
+            # กำหนดสถานะและสีในรูปแบบ BGR: เขียว / ส้มเหลือง / แดง
             if cva_angle >= 50:
-                status_str, risk_str, color, stat_val = "NORMAL (Good Posture)", "Risk: LOW", (34, 197, 94), "ปกติ (Normal)"
+                status_str, risk_str = "NORMAL (Good Posture)", "Risk: LOW"
+                color = (50, 220, 50)       # 🟢 เขียวสว่าง (BGR)
+                stat_val = "ปกติ (Normal)"
             elif cva_angle >= 40:
-                status_str, risk_str, color, stat_val = "MILD FORWARD HEAD", "Risk: MODERATE", (245, 158, 11), "คอยื่นเล็กน้อย (Mild FHP)"
+                status_str, risk_str = "MILD FORWARD HEAD", "Risk: MODERATE"
+                color = (0, 185, 255)       # 🟡 ส้มอมเหลืองเตือนภัย (BGR)
+                stat_val = "คอยื่นเล็กน้อย (Mild FHP)"
             else:
-                status_str, risk_str, color, stat_val = "SEVERE FORWARD HEAD", "Risk: HIGH (Text Neck)", (239, 68, 68), "คอยื่นรุนแรง (Severe FHP)"
+                status_str, risk_str = "SEVERE FORWARD HEAD", "Risk: HIGH (Text Neck)"
+                color = (50, 50, 255)       # 🔴 แดงสว่างเตือนภัยขั้นวิกฤต (BGR)
+                stat_val = "คอยื่นรุนแรง (Severe FHP)"
 
-            # === ฝั่งซ้ายของ HUD: ผลวิเคราะห์ทางการแพทย์ (CVA) ===
-            put_crisp_text(img, f"CVA: {cva_angle:.1f} deg", (20, 38), cv2.FONT_HERSHEY_DUPLEX, 1.0, (255, 255, 255), 2, shadow_thickness=4)
+            # === ฝั่งซ้ายของ HUD: ผลวิเคราะห์ทางการแพทย์ (CVA ปรับสีตามระดับความรุนแรง) ===
+            put_crisp_text(img, f"CVA: {cva_angle:.1f} deg", (20, 38), cv2.FONT_HERSHEY_DUPLEX, 1.0, color, 2, shadow_thickness=4)
             put_crisp_text(img, status_str, (20, 74), cv2.FONT_HERSHEY_DUPLEX, 0.65, color, 2, shadow_thickness=3)
             put_crisp_text(img, risk_str, (20, 102), cv2.FONT_HERSHEY_SIMPLEX, 0.52, color, 1, shadow_thickness=3)
 
@@ -281,7 +278,7 @@ def analyze_and_draw_posture(img, pose_model):
             put_crisp_text(img, f"||v|| = {mag_3d} px", (right_x, 74), cv2.FONT_HERSHEY_SIMPLEX, 0.60, (241, 245, 249), 1, shadow_thickness=3)
             put_crisp_text(img, side_label, (right_x, 102), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (148, 163, 184), 1, shadow_thickness=3)
 
-            # === วาดแกนพิกัด X, Y, Z ที่จุด C7 (พร้อม Anti-Aliasing และ Badge คมชัด) ===
+            # === วาดแกนพิกัด X, Y, Z ที่จุด C7 ===
             axis_len = 80
             ax_x = (sh_px + int(axis_len * x_dir), sh_py)
             ax_y = (sh_px, sh_py - axis_len)
@@ -303,17 +300,17 @@ def analyze_and_draw_posture(img, pose_model):
 
             # เวกเตอร์ u (สีเขียวคมชัด)
             ref_x = sh_px + (125 * x_dir)
-            cv2.arrowedLine(img, p_c7, (ref_x, sh_py), (34, 197, 94), 3, cv2.LINE_AA, tipLength=0.15)
-            draw_badge_label(img, "u [1,0,0]", (ref_x - (10 if x_dir > 0 else 55), sh_py + 26), text_color=(34, 197, 94), bg_color=(15, 23, 42), fontScale=0.45)
+            cv2.arrowedLine(img, p_c7, (ref_x, sh_py), (50, 220, 50), 3, cv2.LINE_AA, tipLength=0.15)
+            draw_badge_label(img, "u [1,0,0]", (ref_x - (10 if x_dir > 0 else 55), sh_py + 26), text_color=(50, 220, 50), bg_color=(15, 23, 42), fontScale=0.45)
 
             # เวกเตอร์ v (สีทองคมชัด)
             cv2.arrowedLine(img, p_c7, p_ear, (0, 215, 255), 4, cv2.LINE_AA, tipLength=0.12)
             draw_badge_label(img, f"v ({dx},{dy},{dz})", (ear_px + 12, ear_py), text_color=(0, 215, 255), bg_color=(15, 23, 42), fontScale=0.45)
 
-            # ส่วนโค้งมุม CVA
+            # ส่วนโค้งมุม CVA (ใช้สีตามระดับความรุนแรง)
             start_angle = 0 if x_dir > 0 else 180
             end_angle = -int(cva_angle) if x_dir > 0 else 180 + int(cva_angle)
-            cv2.ellipse(img, p_c7, (45, 45), 0, start_angle, end_angle, (255, 255, 255), 2, cv2.LINE_AA)
+            cv2.ellipse(img, p_c7, (45, 45), 0, start_angle, end_angle, color, 2, cv2.LINE_AA)
 
             # จุด Marker C7, Ear และ Floor
             cv2.circle(img, p_c7, 7, (0, 0, 255), -1, cv2.LINE_AA)
@@ -414,7 +411,7 @@ with col_cam:
             cv2_img = cv2.imdecode(bytes_data, cv2.IMREAD_COLOR)
             
             if cv2_img is not None:
-                max_dim = 1080  # ปรับเพิ่มความละเอียดให้ภาพคมชัดยิ่งขึ้น
+                max_dim = 1080
                 h_orig, w_orig = cv2_img.shape[:2]
                 if max(h_orig, w_orig) > max_dim:
                     scale = max_dim / max(h_orig, w_orig)
