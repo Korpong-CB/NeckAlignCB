@@ -10,7 +10,7 @@ import numpy as np
 import plotly.graph_objects as go
 
 # 1. ตั้งค่าหน้าเว็บแบบ Wide
-st.set_page_config(page_title="Neck Align - ระบบวิเคราะห์มุมคอ 3D", page_icon="📐", layout="wide")
+st.set_page_config(page_title="Neck อะไร ชัยภูมิภักดีชุมพล", page_icon="📐", layout="wide")
 
 st.markdown("""
     <style>
