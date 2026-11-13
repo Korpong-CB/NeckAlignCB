@@ -57,9 +57,9 @@ with col_logo:
 with col_title:
     st.markdown("""
         <div class="main-header">
-            <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>📐 โครงงานคณิตศาสตร์: Neck Align</h2>
+            <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>📐 โครงงาน Neck อะไร</h2>
             <p style='margin:6px 0 0 0; font-size:15px; color:#e0f2fe;'>
-                ระบบตรวจวัดและวิเคราะห์มุมกระดูกคอ (CVA) อัตโนมัติ พร้อม <b>การจำลองกระดูกสันหลังส่วนคอ C1–C7 ในปริภูมิ 3 มิติ</b>
+                ระบบตรวจวัดและวิเคราะห์มุมกระดูกคอ (CVA) อัตโนมัติ พร้อม การจำลองกระดูกสันหลังส่วนคอ C1–C7 ในปริภูมิ 3 มิติ
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -368,7 +368,7 @@ with col_cam:
     
     tab_live, tab_upload = st.tabs([
         "💻 โหมดกล้องวิดีโอสด (Live Camera)", 
-        "📱 โหมดอัปโหลด / ถ่ายภาพ (สำหรับ iPad & มือถือ)"
+        "📱 โหมดอัปโหลดภาพถ่าย"
     ])
 
     with tab_live:
@@ -489,7 +489,6 @@ with col_info:
         st.latex(r"\theta = \arctan2(\Delta y, \Delta x) \times \left(\frac{180^\circ}{\pi}\right)")
 
 st.markdown("---")
-st.markdown("### 🎓 ข้อมูลโครงงานและคณะผู้จัดทำ")
 
 col_students, col_advisors = st.columns(2)
 with col_students:
