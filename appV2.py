@@ -36,6 +36,15 @@ if "active_vec" not in st.session_state:
     st.session_state.active_vec = [75, 120, -20]
     st.session_state.active_cva = 55.0
 
+# โหลดโมเดล MediaPipe สำหรับภาพนิ่งไว้ล่วงหน้าแค่ครั้งเดียว (ป้องกันแอปค้าง)
+@st.cache_resource
+def get_static_pose_model():
+    return mp.solutions.pose.Pose(
+        static_image_mode=True,
+        model_complexity=1,
+        min_detection_confidence=0.4
+    )
+
 # 2. ส่วนหัวและตราโรงเรียน
 col_logo, col_title = st.columns([1, 6])
 with col_logo:
@@ -180,7 +189,7 @@ def draw_dashed_line(img, pt1, pt2, color, thickness=1, gap=6):
         p2 = (int(pt1[0] + (pt2[0] - pt1[0]) * r2), int(pt1[1] + (pt2[1] - pt1[1]) * r2))
         cv2.line(img, p1, p2, color, thickness, cv2.LINE_AA)
 
-# ฟังก์ชันกลางสำหรับประมวลผลภาพและวาด HUD 3D (ใช้ร่วมกันทั้งโหมด iPad และโหมดสตรีมสด)
+# ฟังก์ชันกลางสำหรับประมวลผลภาพและวาด HUD 3D
 def analyze_and_draw_posture(img, pose_model):
     h, w, _ = img.shape
     rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -211,7 +220,7 @@ def analyze_and_draw_posture(img, pose_model):
             x_dir = -1
             side_label = "SIDE: LEFT"
             
-        if ear.visibility > 0.4 and sh.visibility > 0.4:
+        if ear.visibility > 0.35 and sh.visibility > 0.35:
             ear_px, ear_py = int(ear.x * w), int(ear.y * h)
             sh_px, sh_py = int(sh.x * w), int(sh.y * h)
             
@@ -284,7 +293,7 @@ def analyze_and_draw_posture(img, pose_model):
 
     return img, cva_val, stat_val, vec_val, mag_val
 
-# 4. คลาส VideoProcessor สำหรับโหมด WebRTC
+# 4. คลาส VideoProcessor สำหรับโหมด WebRTC (ใช้กับคอมพิวเตอร์)
 class VideoProcessor:
     def __init__(self):
         self.mp_pose = mp.solutions.pose
@@ -318,33 +327,44 @@ class VideoProcessor:
 col_cam, col_info = st.columns([3, 2])
 
 with col_cam:
-    st.markdown("### 📹 ระบบกล้องตรวจจับและคำนวณเวกเตอร์ 3D")
+    st.markdown("### 📸 ระบบรับภาพและคำนวณเวกเตอร์ 3D")
     
-    # แยก 2 แท็บ: แท็บแรกสำหรับ iPad/มือถือ (ติดชัวร์ 100%) และแท็บสองสำหรับกล้องสด WebRTC
-    tab_ipad, tab_live = st.tabs([
-        "📱 โหมดกล้องสำหรับ iPad / มือถือ (เสถียร 100%)", 
-        "💻 โหมดกล้องวิดีโอสด (WebRTC Live)"
+    # แยก 2 แท็บ: แท็บแรกสำหรับอัปโหลด/ถ่ายด้วยกล้อง iPad โดยตรง (ไม่ค้าง 100%) และแท็บสองสำหรับคอมพิวเตอร์
+    tab_upload, tab_live = st.tabs([
+        "📱 โหมดสำหรับ iPad / มือถือ (ถ่ายรูปหรือเลือกรูปจากอัลบั้ม)", 
+        "💻 โหมดกล้องวิดีโอสด (สำหรับ PC)"
     ])
 
-    with tab_ipad:
-        st.info("💡 **วิธีใช้บน iPad:** หันด้านข้างเข้าหากล้อง แล้วกดปุ่ม **Take Photo** ระบบจะวาดเวกเตอร์ 3D และจำลองกระดูกคอ C1–C7 ทันที")
-        img_file_buffer = st.camera_input("📸 กดปุ่มเพื่อถ่ายภาพวิเคราะห์มุมคอ (สามารถกดสลับกล้องหน้า-หลังได้ที่มุมขวาบนของจอภาพ)")
+    with tab_upload:
+        st.info("💡 **วิธีใช้บน iPad:** กดปุ่ม **Browse files** ด้านล่าง -> เลือก **ถ่ายภาพ (Take Photo)** หรือ **คลังรูปภาพ (Photo Library)** เพื่อวิเคราะห์มุมคอทันทีโดยไม่ค้างครับ")
+        uploaded_file = st.file_uploader(
+            "📤 กดปุ่มเพื่อถ่ายภาพจากกล้อง iPad หรือเลือกรูปภาพด้านข้างจากอัลบั้ม", 
+            type=["jpg", "jpeg", "png", "webp"]
+        )
         
-        if img_file_buffer is not None:
-            bytes_data = img_file_buffer.getvalue()
-            cv2_img = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
+        if uploaded_file is not None:
+            bytes_data = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+            cv2_img = cv2.imdecode(bytes_data, cv2.IMREAD_COLOR)
             
-            with mp.solutions.pose.Pose(static_image_mode=True, model_complexity=1, min_detection_confidence=0.4) as static_pose:
-                processed_img, cva_val, stat_val, vec_val, mag_val = analyze_and_draw_posture(cv2_img, static_pose)
+            if cv2_img is not None:
+                # ย่อขนาดภาพอัตโนมัติถ้ารูปจาก iPad ใหญ่เกินไป เพื่อป้องกันแอปค้างและทำให้文字 HUD พอดีสวยงาม
+                max_dim = 960
+                h_orig, w_orig = cv2_img.shape[:2]
+                if max(h_orig, w_orig) > max_dim:
+                    scale = max_dim / max(h_orig, w_orig)
+                    cv2_img = cv2.resize(cv2_img, (int(w_orig * scale), int(h_orig * scale)), interpolation=cv2.INTER_AREA)
+
+                pose_model = get_static_pose_model()
+                processed_img, cva_val, stat_val, vec_val, mag_val = analyze_and_draw_posture(cv2_img, pose_model)
                 
                 if cva_val is not None:
                     st.session_state.active_vec = vec_val
                     st.session_state.active_cva = cva_val
                     
                     rgb_out = cv2.cvtColor(processed_img, cv2.COLOR_BGR2RGB)
-                    st.image(rgb_out, caption=f"ผลการวิเคราะห์: มุม CVA = {cva_val}° ({stat_val})", use_column_width=True)
+                    st.image(rgb_out, caption=f"✅ วิเคราะห์สำเร็จ: มุม CVA = {cva_val}° ({stat_val})", use_column_width=True)
                     
-                    if st.button("💾 บันทึกรูปนี้ลงแกลเลอรีด้านล่าง", type="primary", use_container_width=True):
+                    if st.button("💾 บันทึกผลวิเคราะห์นี้ลงรายการเปรียบเทียบด้านล่าง", type="primary", use_container_width=True):
                         record = {
                             "time": datetime.now().strftime("%H:%M:%S"),
                             "img": rgb_out,
@@ -356,27 +376,14 @@ with col_cam:
                         st.session_state.captured_records.insert(0, record)
                         st.toast("✅ บันทึกภาพและจำลองแนวกระดูกคอ C1–C7 สำเร็จ!", icon="🦴")
                 else:
-                    st.error("⚠️ ตรวจไม่พบจุดหูและไหล่ที่ชัดเจน กรุณากด Clear photo แล้วหันข้างถ่ายใหม่อีกครั้งครับ")
+                    st.error("⚠️ ตรวจไม่พบจุดหูและไหล่ที่ชัดเจน กรุณาใช้ภาพถ่ายที่หันด้านข้างให้เห็นช่วงศีรษะและหัวไหล่ชัดเจนครับ")
 
     with tab_live:
         ctx = webrtc_streamer(
             key="neck-align-stream",
             mode=WebRtcMode.SENDRECV,
             video_processor_factory=VideoProcessor,
-            rtc_configuration={
-                "iceServers": [
-                    {"urls": ["stun:stun.l.google.com:19302"]},
-                    {
-                        "urls": [
-                            "turn:openrelay.metered.ca:80",
-                            "turn:openrelay.metered.ca:443",
-                            "turn:openrelay.metered.ca:443?transport=tcp"
-                        ],
-                        "username": "openrelayproject",
-                        "credential": "openrelayproject"
-                    }
-                ]
-            },
+            rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
             media_stream_constraints={"video": True, "audio": False},
             async_processing=True
         )
