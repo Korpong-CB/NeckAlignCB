@@ -36,7 +36,7 @@ if "active_vec" not in st.session_state:
     st.session_state.active_vec = [75, 120, -20]
     st.session_state.active_cva = 55.0
 
-# โหลดโมเดล MediaPipe สำหรับภาพนิ่งไว้ล่วงหน้าแค่ครั้งเดียว (ป้องกันแอปค้าง)
+# โหลดโมเดล MediaPipe สำหรับภาพนิ่งไว้ล่วงหน้าแค่ครั้งเดียว
 @st.cache_resource
 def get_static_pose_model():
     return mp.solutions.pose.Pose(
@@ -57,7 +57,7 @@ with col_logo:
 with col_title:
     st.markdown("""
         <div class="main-header">
-            <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>📐 โครงงาน Neck อะไร</h2>
+            <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>📐 โครงงานคณิตศาสตร์: Neck Align</h2>
             <p style='margin:6px 0 0 0; font-size:15px; color:#e0f2fe;'>
                 ระบบตรวจวัดและวิเคราะห์มุมกระดูกคอ (CVA) อัตโนมัติ พร้อมการจำลองกระดูกสันหลังส่วนคอ C1–C7 ในปริภูมิ 3 มิติ
             </p>
@@ -176,7 +176,7 @@ def create_interactive_3d_spine_plot(vec, cva_angle):
     )
     return fig
 
-# ฟังก์ชันเขียนตัวหนังสือคมชัดสูง (มีเงาขอบดำลบรอยหยักด้วย cv2.LINE_AA)
+# ฟังก์ชันเขียนตัวหนังสือคมชัดสูง
 def put_crisp_text(img, text, org, fontFace, fontScale, color, thickness=1, shadow_color=(0, 0, 0), shadow_thickness=3):
     cv2.putText(img, text, org, fontFace, fontScale, shadow_color, shadow_thickness, cv2.LINE_AA)
     cv2.putText(img, text, org, fontFace, fontScale, color, thickness, cv2.LINE_AA)
@@ -205,7 +205,9 @@ def draw_dashed_line(img, pt1, pt2, color, thickness=1, gap=6):
         cv2.line(img, p1, p2, color, thickness, cv2.LINE_AA)
 
 # ฟังก์ชันกลางสำหรับประมวลผลภาพและวาด HUD คมชัดระดับ HD
-def analyze_and_draw_posture(img, pose_model):
+def analyze_and_draw_posture(img, pose_model, flip_h=True):
+    if flip_h:
+        img = cv2.flip(img, 1)  # พลิกแนวนอนสำหรับกล้องหน้าแบบกระจกเงา
     h, w, _ = img.shape
     rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     results = pose_model.process(rgb_img)
@@ -327,7 +329,7 @@ def analyze_and_draw_posture(img, pose_model):
 
     return img, cva_val, stat_val, vec_val, mag_val
 
-# 4. คลาส VideoProcessor สำหรับโหมด WebRTC (ใช้กับคอมพิวเตอร์)
+# 4. คลาส VideoProcessor สำหรับโหมด WebRTC (รองรับการตั้งค่ากลับภาพตามชนิดกล้อง)
 class VideoProcessor:
     def __init__(self):
         self.mp_pose = mp.solutions.pose
@@ -343,11 +345,12 @@ class VideoProcessor:
         self.latest_status = None
         self.latest_vec = None
         self.latest_mag = None
+        self.is_front_cam = True
 
     def recv(self, frame):
         img = frame.to_ndarray(format="bgr24")
-        img = cv2.flip(img, 1)
-        img, cva_val, stat_val, vec_val, mag_val = analyze_and_draw_posture(img, self.pose)
+        # ถ้าเป็นกล้องหน้าจะ flip เพื่อให้เป็นกระจกเงา แต่ถ้าเป็นกล้องหลังจะไม่ flip เพื่อให้ตรงกับความเป็นจริง
+        img, cva_val, stat_val, vec_val, mag_val = analyze_and_draw_posture(img, self.pose, flip_h=self.is_front_cam)
 
         self.latest_frame = img.copy()
         self.latest_cva = cva_val
@@ -364,19 +367,40 @@ with col_cam:
     st.markdown("### 📸 ระบบรับภาพและคำนวณเวกเตอร์ 3D")
     
     tab_live, tab_upload = st.tabs([
-        "💻 โหมดกล้องวิดีโอสด (Live Camera)", 
-        "📱 โหมดอัปโหลด / ถ่ายภาพ (สำหรับ iPad & มือถือ)"
+        "📹 โหมดกล้องเรียลไทม์ (Live Camera)", 
+        "📱 โหมดอัปโหลดภาพถ่าย"
     ])
 
     with tab_live:
+        # เมนูสลับกล้องหน้า-หลัง
+        col_cam_mode, col_cam_tip = st.columns([1, 1])
+        with col_cam_mode:
+            cam_choice = st.radio(
+                "📷 เลือกกล้องที่ใช้งาน:",
+                options=["กล้องหน้า (Front Camera)", "กล้องหลัง (Back Camera)"],
+                horizontal=True
+            )
+            is_front = (cam_choice == "กล้องหน้า (Front Camera)")
+            # กำหนดคำสั่ง constraint สำหรับ WebRTC ตามมาตรฐานเบราว์เซอร์
+            video_constraints = {
+                "facingMode": "user" if is_front else {"exact": "environment"}
+            }
+
+        with col_cam_tip:
+            st.caption("💡 *หากเปลี่ยนกล้องแล้วภาพยังไม่สลับ ให้กดปุ่ม **STOP** แล้วกด **START** ใหม่อีกครั้งเพื่อรีเซ็ตเลนส์กล้อง*")
+
         ctx = webrtc_streamer(
-            key="neck-align-stream",
+            key=f"neck-align-stream-{'front' if is_front else 'back'}",  # เปลี่ยน key อัตโนมัติเพื่อให้เบราว์เซอร์สร้าง Stream ใหม่ทันที
             mode=WebRtcMode.SENDRECV,
             video_processor_factory=VideoProcessor,
             rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
-            media_stream_constraints={"video": True, "audio": False},
+            media_stream_constraints={"video": video_constraints, "audio": False},
             async_processing=True
         )
+        
+        # ส่งสถานะกล้องหน้า/หลังไปที่ VideoProcessor เพื่อปรับการสะท้อนภาพ (Mirror)
+        if ctx.video_processor:
+            ctx.video_processor.is_front_cam = is_front
         
         if st.button("📸 บันทึกภาพจากกล้องสดและอัปเดตโมเดล 3D", use_container_width=True, type="primary"):
             if ctx.video_processor and ctx.video_processor.latest_frame is not None:
@@ -395,9 +419,9 @@ with col_cam:
                     st.session_state.active_cva = vp.latest_cva
                     st.toast("✅ บันทึกภาพและจำลองแนวกระดูกคอ C1–C7 สำเร็จ!", icon="🦴")
                 else:
-                    st.warning("⚠️ กล้องเปิดอยู่แต่ยังตรวจไม่พบมุมคอ กรุณาหันข้างเข้าหากล้องให้ชัดเจนครับ")
+                    st.warning("⚠️ กล้องเปิดอยู่แต่ยังตรวจไม่พบมุมคอ กรุณาหันข้างเข้าหากล้องให้ชัดเจน")
             else:
-                st.warning("⚠️ กรุณากดปุ่ม START เพื่อเปิดกล้องก่อนกดบันทึกภาพครับ")
+                st.warning("⚠️ กรุณากดปุ่ม START เพื่อเปิดกล้องก่อนกดบันทึกภาพ")
 
     with tab_upload:
         st.info("💡 **วิธีใช้บน iPad:** กดปุ่ม **Browse files** ด้านล่าง -> เลือก **ถ่ายภาพ (Take Photo)** หรือ **คลังรูปภาพ (Photo Library)** เพื่อวิเคราะห์มุมคอทันที")
@@ -418,7 +442,7 @@ with col_cam:
                     cv2_img = cv2.resize(cv2_img, (int(w_orig * scale), int(h_orig * scale)), interpolation=cv2.INTER_AREA)
 
                 pose_model = get_static_pose_model()
-                processed_img, cva_val, stat_val, vec_val, mag_val = analyze_and_draw_posture(cv2_img, pose_model)
+                processed_img, cva_val, stat_val, vec_val, mag_val = analyze_and_draw_posture(cv2_img, pose_model, flip_h=False)
                 
                 if cva_val is not None:
                     st.session_state.active_vec = vec_val
@@ -499,7 +523,7 @@ with col_students:
 
 with col_advisors:
     with st.container(border=True):
-        st.markdown("#### 👨‍🏫 ครูที่ปรึกษาโครงงาน")
+        st.markdown("#### 👨‍🏫 คณะครูที่ปรึกษาโครงงาน")
         st.markdown("""
         1. **นางสาวกัญจณ์วรา โนราช**
         2. **นายก่อพงศ์ ภูมิภักดี**
