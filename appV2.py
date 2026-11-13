@@ -329,54 +329,11 @@ col_cam, col_info = st.columns([3, 2])
 with col_cam:
     st.markdown("### 📸 ระบบรับภาพและคำนวณเวกเตอร์ 3D")
     
-    # แยก 2 แท็บ: แท็บแรกสำหรับอัปโหลด/ถ่ายด้วยกล้อง iPad โดยตรง (ไม่ค้าง 100%) และแท็บสองสำหรับคอมพิวเตอร์
-    tab_upload, tab_live = st.tabs([
-        "📱 โหมดสำหรับ iPad / มือถือ (ถ่ายรูปหรือเลือกรูปจากอัลบั้ม)", 
-        "💻 โหมดกล้องวิดีโอสด (สำหรับ PC)"
+    # แยก 2 แท็บ: นำแท็บโหมดกล้องวิดีโอสดขึ้นเป็นแท็บแรก
+    tab_live, tab_upload = st.tabs([
+        "💻 โหมดกล้องวิดีโอสด (Live Camera)", 
+        "📱 โหมดอัปโหลด / ถ่ายภาพ (สำหรับ iPad & มือถือ)"
     ])
-
-    with tab_upload:
-        st.info("💡 **วิธีใช้บน iPad:** กดปุ่ม **Browse files** ด้านล่าง -> เลือก **ถ่ายภาพ (Take Photo)** หรือ **คลังรูปภาพ (Photo Library)** เพื่อวิเคราะห์มุมคอทันทีโดยไม่ค้างครับ")
-        uploaded_file = st.file_uploader(
-            "📤 กดปุ่มเพื่อถ่ายภาพจากกล้อง iPad หรือเลือกรูปภาพด้านข้างจากอัลบั้ม", 
-            type=["jpg", "jpeg", "png", "webp"]
-        )
-        
-        if uploaded_file is not None:
-            bytes_data = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-            cv2_img = cv2.imdecode(bytes_data, cv2.IMREAD_COLOR)
-            
-            if cv2_img is not None:
-                # ย่อขนาดภาพอัตโนมัติถ้ารูปจาก iPad ใหญ่เกินไป เพื่อป้องกันแอปค้างและทำให้文字 HUD พอดีสวยงาม
-                max_dim = 960
-                h_orig, w_orig = cv2_img.shape[:2]
-                if max(h_orig, w_orig) > max_dim:
-                    scale = max_dim / max(h_orig, w_orig)
-                    cv2_img = cv2.resize(cv2_img, (int(w_orig * scale), int(h_orig * scale)), interpolation=cv2.INTER_AREA)
-
-                pose_model = get_static_pose_model()
-                processed_img, cva_val, stat_val, vec_val, mag_val = analyze_and_draw_posture(cv2_img, pose_model)
-                
-                if cva_val is not None:
-                    st.session_state.active_vec = vec_val
-                    st.session_state.active_cva = cva_val
-                    
-                    rgb_out = cv2.cvtColor(processed_img, cv2.COLOR_BGR2RGB)
-                    st.image(rgb_out, caption=f"✅ วิเคราะห์สำเร็จ: มุม CVA = {cva_val}° ({stat_val})", use_column_width=True)
-                    
-                    if st.button("💾 บันทึกผลวิเคราะห์นี้ลงรายการเปรียบเทียบด้านล่าง", type="primary", use_container_width=True):
-                        record = {
-                            "time": datetime.now().strftime("%H:%M:%S"),
-                            "img": rgb_out,
-                            "cva": cva_val,
-                            "status": stat_val,
-                            "vec": vec_val,
-                            "mag": mag_val
-                        }
-                        st.session_state.captured_records.insert(0, record)
-                        st.toast("✅ บันทึกภาพและจำลองแนวกระดูกคอ C1–C7 สำเร็จ!", icon="🦴")
-                else:
-                    st.error("⚠️ ตรวจไม่พบจุดหูและไหล่ที่ชัดเจน กรุณาใช้ภาพถ่ายที่หันด้านข้างให้เห็นช่วงศีรษะและหัวไหล่ชัดเจนครับ")
 
     with tab_live:
         ctx = webrtc_streamer(
@@ -408,6 +365,48 @@ with col_cam:
                     st.warning("⚠️ กล้องเปิดอยู่แต่ยังตรวจไม่พบมุมคอ กรุณาหันข้างเข้าหากล้องให้ชัดเจนครับ")
             else:
                 st.warning("⚠️ กรุณากดปุ่ม START เพื่อเปิดกล้องก่อนกดบันทึกภาพครับ")
+
+    with tab_upload:
+        st.info("💡 **วิธีใช้บน iPad:** กดปุ่ม **Browse files** ด้านล่าง -> เลือก **ถ่ายภาพ (Take Photo)** หรือ **คลังรูปภาพ (Photo Library)** เพื่อวิเคราะห์มุมคอทันทีโดยไม่ค้างครับ")
+        uploaded_file = st.file_uploader(
+            "📤 กดปุ่มเพื่อถ่ายภาพจากกล้อง iPad หรือเลือกรูปภาพด้านข้างจากอัลบั้ม", 
+            type=["jpg", "jpeg", "png", "webp"]
+        )
+        
+        if uploaded_file is not None:
+            bytes_data = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+            cv2_img = cv2.imdecode(bytes_data, cv2.IMREAD_COLOR)
+            
+            if cv2_img is not None:
+                max_dim = 960
+                h_orig, w_orig = cv2_img.shape[:2]
+                if max(h_orig, w_orig) > max_dim:
+                    scale = max_dim / max(h_orig, w_orig)
+                    cv2_img = cv2.resize(cv2_img, (int(w_orig * scale), int(h_orig * scale)), interpolation=cv2.INTER_AREA)
+
+                pose_model = get_static_pose_model()
+                processed_img, cva_val, stat_val, vec_val, mag_val = analyze_and_draw_posture(cv2_img, pose_model)
+                
+                if cva_val is not None:
+                    st.session_state.active_vec = vec_val
+                    st.session_state.active_cva = cva_val
+                    
+                    rgb_out = cv2.cvtColor(processed_img, cv2.COLOR_BGR2RGB)
+                    st.image(rgb_out, caption=f"✅ วิเคราะห์สำเร็จ: มุม CVA = {cva_val}° ({stat_val})", use_column_width=True)
+                    
+                    if st.button("💾 บันทึกผลวิเคราะห์นี้ลงรายการเปรียบเทียบด้านล่าง", type="primary", use_container_width=True):
+                        record = {
+                            "time": datetime.now().strftime("%H:%M:%S"),
+                            "img": rgb_out,
+                            "cva": cva_val,
+                            "status": stat_val,
+                            "vec": vec_val,
+                            "mag": mag_val
+                        }
+                        st.session_state.captured_records.insert(0, record)
+                        st.toast("✅ บันทึกภาพและจำลองแนวกระดูกคอ C1–C7 สำเร็จ!", icon="🦴")
+                else:
+                    st.error("⚠️ ตรวจไม่พบจุดหูและไหล่ที่ชัดเจน กรุณาใช้ภาพถ่ายที่หันด้านข้างให้เห็นช่วงศีรษะและหัวไหล่ชัดเจนครับ")
 
     if len(st.session_state.captured_records) > 0:
         st.markdown("---")
@@ -459,20 +458,20 @@ st.markdown("### 🎓 ข้อมูลโครงงานและคณะ�
 col_students, col_advisors = st.columns(2)
 with col_students:
     with st.container(border=True):
-        st.markdown("#### 👥 นักเรียนผู้จัดทำโครงงาน")
+        st.markdown("#### 👥 คณะผู้จัดทำ")
         st.markdown("""
-        1. **นางสาวทัดหทัย เดชหัสดิน** `ชั้น ม.5/13`
-        2. **นายเมธาสิทธิ์ สัมฤทธิ์** `ชั้น ม.5/13`
-        3. **นายปณพนธ์ วิระรังษิยากรณ์** `ชั้น ม.5/13`
+        1. **นางสาวทัดหทัย เดชหัสดิน** ชั้น ม.5/13
+        2. **นายเมธาสิทธิ์ สัมฤทธิ์** ชั้น ม.5/13
+        3. **นายปณพนธ์ วิระรังษิยากรณ์** ชั้น ม.5/13
         """)
 
 with col_advisors:
     with st.container(border=True):
-        st.markdown("#### 👨‍🏫 คณะครูที่ปรึกษาโครงงาน")
+        st.markdown("#### 👨‍🏫 ครูที่ปรึกษาโครงงาน")
         st.markdown("""
-        * 🔹 **นางสาวกัญจณ์วรา โนราช** *(ครูที่ปรึกษา)*
-        * 🔹 **นายก่อพงศ์ ภูมิภักดี** *(ครูที่ปรึกษา)*
+        * 🔹 **นางสาวกัญจณ์วรา โนราช**
+        * 🔹 **นายก่อพงศ์ ภูมิภักดี**
         """)
 
 with st.container(border=True):
-    st.markdown("<center>🏫 กลุ่มสาระการเรียนรู้คณิตศาสตร์ • <b>โรงเรียนชัยภูมิภักดีชุมพล</b></center>", unsafe_allow_html=True)
+    st.markdown("<center>🏫 กลุ่มสาระการเรียนรู้คณิตศาสตร์ • โรงเรียนชัยภูมิภักดีชุมพล</center>", unsafe_allow_html=True)
