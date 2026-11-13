@@ -57,9 +57,9 @@ with col_logo:
 with col_title:
     st.markdown("""
         <div class="main-header">
-            <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>📐 โครงงาน Neck อะไร</h2>
+            <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>📐 โครงงานคณิตศาสตร์: Neck Align</h2>
             <p style='margin:6px 0 0 0; font-size:15px; color:#e0f2fe;'>
-               ระบบตรวจวัดและวิเคราะห์มุมกระดูกคอ (CVA) อัตโนมัติ พร้อม การจำลองกระดูกสันหลังส่วนคอ C1–C7 ในปริภูมิ 3 มิติ
+                ระบบตรวจวัดและวิเคราะห์มุมกระดูกคอ (CVA) อัตโนมัติ พร้อม <b>การจำลองกระดูกสันหลังส่วนคอ C1–C7 ในปริภูมิ 3 มิติ</b>
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -365,7 +365,7 @@ with col_cam:
     
     tab_live, tab_upload = st.tabs([
         "💻 โหมดกล้องวิดีโอสด (Live Camera)", 
-        "📱 โหมดอัปโหลดภาพถ่าย"
+        "📱 โหมดอัปโหลด / ถ่ายภาพ (สำหรับ iPad & มือถือ)"
     ])
 
     with tab_live:
@@ -486,24 +486,25 @@ with col_info:
         st.latex(r"\theta = \arctan2(\Delta y, \Delta x) \times \left(\frac{180^\circ}{\pi}\right)")
 
 st.markdown("---")
+st.markdown("### 🎓 ข้อมูลโครงงานและคณะผู้จัดทำ")
 
 col_students, col_advisors = st.columns(2)
 with col_students:
     with st.container(border=True):
-        st.markdown("#### 👥 คณะผู้จัดทำโครงงาน")
+        st.markdown("#### 👥 นักเรียนผู้จัดทำโครงงาน")
         st.markdown("""
-        1. **นางสาวทัดหทัย เดชหัสดิน** ชั้น ม.5/13
-        2. **นายเมธาสิทธิ์ สัมฤทธิ์** ชั้น ม.5/13
-        3. **นายปณพนธ์ วิระรังษิยากรณ์** ชั้น ม.5/13
+        1. **นางสาวทัดหทัย เดชหัสดิน** `ชั้น ม.5/13`
+        2. **นายเมธาสิทธิ์ สัมฤทธิ์** `ชั้น ม.5/13`
+        3. **นายปณพนธ์ วิระรังษิยากรณ์** `ชั้น ม.5/13`
         """)
 
 with col_advisors:
     with st.container(border=True):
-        st.markdown("#### 👨‍🏫 ครูที่ปรึกษาโครงงาน")
+        st.markdown("#### 👨‍🏫 คณะครูที่ปรึกษาโครงงาน")
         st.markdown("""
-        1. **นางสาวกัญจณ์วรา โนราช**
-        2. **นายก่อพงศ์ ภูมิภักดี**
+        * 🔹 **นางสาวกัญจณ์วรา โนราช** *(ครูที่ปรึกษา)*
+        * 🔹 **นายก่อพงศ์ ภูมิภักดี** *(ครูที่ปรึกษา)*
         """)
 
 with st.container(border=True):
-    st.markdown("<center>🏫 กลุ่มสาระการเรียนรู้คณิตศาสตร์ • โรงเรียนชัยภูมิภักดีชุมพล</center>", unsafe_allow_html=True)
+    st.markdown("<center>🏫 กลุ่มสาระการเรียนรู้คณิตศาสตร์ • <b>โรงเรียนชัยภูมิภักดีชุมพล</b></center>", unsafe_allow_html=True)
