@@ -57,9 +57,9 @@ with col_logo:
 with col_title:
     st.markdown("""
         <div class="main-header">
-            <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>📐 โครงงานคณิตศาสตร์: Neck Align</h2>
+            <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>📐 โครงงาน Neck Align</h2>
             <p style='margin:6px 0 0 0; font-size:15px; color:#e0f2fe;'>
-                ระบบตรวจวัดและวิเคราะห์มุมกระดูกคอ (CVA) อัตโนมัติ พร้อม <b>การจำลองกระดูกสันหลังส่วนคอ C1–C7 ในปริภูมิ 3 มิติ</b>
+                ระบบตรวจวัดและวิเคราะห์มุมกระดูกคอ (CVA) อัตโนมัติ พร้อมการจำลองกระดูกสันหลังส่วนคอ C1–C7 ในปริภูมิ 3 มิติ
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -371,7 +371,7 @@ with col_cam:
     
     tab_live, tab_upload = st.tabs([
         "📹 โหมดกล้องเรียลไทม์ (Live Camera)", 
-        "📱 โหมดอัปโหลด / ถ่ายภาพ (สำหรับ iPad & มือถือ)"
+        "📱 โหมดอัปโหลดภาพถ่าย (สำหรับ iPad & มือถือ)"
     ])
 
     with tab_live:
