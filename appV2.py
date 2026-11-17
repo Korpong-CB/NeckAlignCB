@@ -5,13 +5,13 @@ import mediapipe as mp
 import av
 import math
 import os
-import gc  # ดึงโมดูลเก็บกวาดขยะหน่วยความจำ
+import gc  # โมดูลเคลียร์หน่วยความจำ RAM ขยะ
 from datetime import datetime
 import numpy as np
 import plotly.graph_objects as go
 
-# 1. ตั้งค่าหน้าเว็บแบบ Wide
-st.set_page_config(page_title="Neck Align - ระบบวิเคราะห์มุมคอ 3D", page_icon="📐", layout="wide")
+# 1. ตั้งค่าหน้าเว็บแบบ Wide เพื่อความสวยงามและใช้งานง่ายบน iPad
+st.set_page_config(page_title="Neck Align CB", page_icon="📐", layout="wide")
 
 st.markdown("""
     <style>
@@ -37,8 +37,8 @@ if "active_vec" not in st.session_state:
     st.session_state.active_vec = [75, 120, -20]
     st.session_state.active_cva = 55.0
 
-# โหลดโมเดล MediaPipe สำหรับภาพนิ่ง และใช้การแคชทรัพยากรอย่างยืดหยุ่น
-@st.cache_resource(max_entries=1) # กำหนดให้เก็บหน่วยความจำโมเดลสูงสุดแค่ 1 ตัว
+# โหลดโมเดล MediaPipe สำหรับภาพนิ่ง และแคชทรัพยากรไว้เพื่อลดการใช้ RAM บน Cloud
+@st.cache_resource(max_entries=1)
 def get_static_pose_model():
     return mp.solutions.pose.Pose(
         static_image_mode=True,
@@ -46,7 +46,8 @@ def get_static_pose_model():
         min_detection_confidence=0.4
     )
 
-# 2. ส่วนหัวและตราโรงเรียนcol_logo, col_title = st.columns()
+# 2. ส่วนหัวหน้าเว็บและตราโรงเรียน (แก้ไขเสร็จสมบูรณ์ 100%)
+col_logo, col_title = st.columns([1, 6])
 with col_logo:
     if os.path.exists("logo.png"):
         st.image("logo.png", width=110)
@@ -57,7 +58,7 @@ with col_logo:
 with col_title:
     st.markdown("""
         <div class="main-header">
-            <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>📐 โครงงาน Neck Align</h2>
+            <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>📐 โครงงานคณิตศาสตร์ Neck Align CB</h2>
             <p style='margin:6px 0 0 0; font-size:15px; color:#e0f2fe;'>
                 ระบบตรวจวัดและวิเคราะห์มุมกระดูกคอ (CVA) อัตโนมัติ พร้อมการจำลองกระดูกสันหลังส่วนคอ C1–C7 ในปริภูมิ 3 มิติ
             </p>
@@ -76,7 +77,7 @@ def calculate_cva_angle(ear_x, ear_y, sh_x, sh_y):
     return round(angle_deg, 1), dx, dy
 
 def generate_cervical_spine_3d(vec, cva_angle):
-    dx, dy, dz = vec[0], vec, vec
+    dx, dy, dz = vec[0], vec[1], vec[2]
     names = ["C7", "C6", "C5", "C4", "C3", "C2 (Axis)", "C1 (Atlas)"]
     t_vals = np.linspace(0, 1, 7)
     curve_factor = 25.0 if cva_angle >= 50 else (45.0 - (cva_angle * 0.4))
@@ -94,7 +95,7 @@ def generate_cervical_spine_3d(vec, cva_angle):
     return spine_x, spine_y, spine_z, names
 
 def create_interactive_3d_spine_plot(vec, cva_angle):
-    dx, dy, dz = vec[0], vec, vec
+    dx, dy, dz = vec[0], vec[1], vec[2]
     u_len = max(abs(dx), 110) * (1 if dx >= 0 else -1)
     
     fig = go.Figure()
@@ -108,7 +109,7 @@ def create_interactive_3d_spine_plot(vec, cva_angle):
         name="แนวกระดูกคอ (Cervical Alignment)"
     ))
 
-    # 2. ข้อกระดูกสันหลัง C1 ถึง C7
+    # 2. ข้อกระดูกสันหลัง C1 ถึง C7 (Vertebrae Nodes)
     colors = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#10b981', '#06b6d4']
     fig.add_trace(go.Scatter3d(
         x=sp_x, y=sp_y, z=sp_z,
@@ -120,7 +121,7 @@ def create_interactive_3d_spine_plot(vec, cva_angle):
         name="ข้อกระดูก C1 - C7"
     ))
 
-    # 3. เวกเตอร์ระนาบอ้างอิง u
+    # 3. เวกเตอร์ระนาบอ้างอิง u (แกนระนาบสีเขียว)
     fig.add_trace(go.Scatter3d(
         x=[0, u_len], y=[0, 0], z=[0, 0],
         mode='lines+text',
@@ -132,11 +133,11 @@ def create_interactive_3d_spine_plot(vec, cva_angle):
     fig.add_trace(go.Cone(
         x=[u_len], y=[0], z=[0],
         u=[u_len * 0.15], v=[0], w=[0],
-        colorscale=[[0, '#22c55e'],],
+        colorscale=[[0, '#22c55e'], [1, '#22c55e']],
         showscale=False, sizemode="absolute", sizeref=12, anchor="tip", name="หัวลูกศร u"
     ))
 
-    # 4. เวกเตอร์กระดูกคอ v
+    # 4. เวกเตอร์กระดูกคอ v (เส้นแกนหลักสีทอง)
     fig.add_trace(go.Scatter3d(
         x=[0, dx], y=[0, dz], z=[0, dy],
         mode='lines',
@@ -146,11 +147,11 @@ def create_interactive_3d_spine_plot(vec, cva_angle):
     fig.add_trace(go.Cone(
         x=[dx], y=[dz], z=[dy],
         u=[dx * 0.15], v=[dz * 0.15], w=[dy * 0.15],
-        colorscale=[[0, '#fbbf24'],],
+        colorscale=[[0, '#fbbf24'], [1, '#fbbf24']],
         showscale=False, sizemode="absolute", sizeref=14, anchor="tip", name="หัวลูกศร v"
     ))
 
-    # 5. เส้นประโปรเจกต์ 3 มิติ
+    # 5. เส้นประโปรเจกต์แสดงองค์ประกอบ 3 มิติ
     fig.add_trace(go.Scatter3d(
         x=[dx, dx, 0],
         y=[dz, dz, 0],
@@ -176,12 +177,12 @@ def create_interactive_3d_spine_plot(vec, cva_angle):
     )
     return fig
 
-# ฟังก์ชันเขียนตัวหนังสือคมชัดสูง
+# ฟังก์ชันเขียนตัวหนังสือคมชัดสูง (มีเงาขอบดำลบรอยหยักด้วย cv2.LINE_AA)
 def put_crisp_text(img, text, org, fontFace, fontScale, color, thickness=1, shadow_color=(0, 0, 0), shadow_thickness=3):
     cv2.putText(img, text, org, fontFace, fontScale, shadow_color, shadow_thickness, cv2.LINE_AA)
     cv2.putText(img, text, org, fontFace, fontScale, color, thickness, cv2.LINE_AA)
 
-# ฟังก์ชันวาดป้ายข้อความพร้อมพื้นหลัง (Badge/Pill)
+# ฟังก์ชันวาดป้ายข้อความพร้อมพื้นหลัง (Badge Label) เพื่อไม่ให้สีกลืนกับคน
 def draw_badge_label(img, text, org, text_color=(255, 255, 255), bg_color=(15, 23, 42), fontScale=0.48, thickness=1):
     font = cv2.FONT_HERSHEY_SIMPLEX
     (tw, th), baseline = cv2.getTextSize(text, font, fontScale, thickness)
@@ -193,25 +194,26 @@ def draw_badge_label(img, text, org, text_color=(255, 255, 255), bg_color=(15, 2
 
 # ฟังก์ชันวาดเส้นประใน OpenCV แบบคมชัด
 def draw_dashed_line(img, pt1, pt2, color, thickness=1, gap=6):
-    dist = math.hypot(pt2[0] - pt1[0], pt2 - pt1)
+    dist = math.hypot(pt2[0] - pt1[0], pt2[1] - pt1[1])
     if dist == 0:
         return
     pts = max(int(dist / gap), 1)
     for i in range(0, pts, 2):
         r1 = i / pts
         r2 = min((i + 1) / pts, 1.0)
-        p1 = (int(pt1[0] + (pt2[0] - pt1[0]) * r1), int(pt1 + (pt2 - pt1) * r1))
-        p2 = (int(pt1[0] + (pt2[0] - pt1[0]) * r2), int(pt1 + (pt2 - pt1) * r2))
+        p1 = (int(pt1[0] + (pt2[0] - pt1[0]) * r1), int(pt1[1] + (pt2[1] - pt1[1]) * r1))
+        p2 = (int(pt1[0] + (pt2[0] - pt1[0]) * r2), int(pt1[1] + (pt2[1] - pt1[1]) * r2))
         cv2.line(img, p1, p2, color, thickness, cv2.LINE_AA)
 
-# ฟังก์ชันกลางสำหรับประมวลผลภาพและวาด HUD คมชัดระดับ HD
+# ฟังก์ชันกลางสำหรับประมวลผลภาพและวาด HUD คมชัดสูง (สลับสี เขียว-เหลือง-แดง อัตโนมัติตามมุม CVA)
 def analyze_and_draw_posture(img, pose_model, flip_h=True):
     if flip_h:
-        img = cv2.flip(img, 1)  # พลิกแนวนอนสำหรับกล้องหน้าแบบกระจกเงา
+        img = cv2.flip(img, 1)  # พลิกแนวนอนสำหรับสไตล์กระจกเงาเมื่อใช้กล้องหน้า
     h, w, _ = img.shape
     rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     results = pose_model.process(rgb_img)
 
+    # วาดแถบพื้นหลัง HUD คมชัดสูงทึบแสง 94% ป้องกันสัญญาณรบกวนของเลนส์กล้อง
     hud_h = 118
     hud_overlay = img.copy()
     cv2.rectangle(hud_overlay, (0, 0), (w, hud_h), (10, 15, 29), -1)
@@ -255,72 +257,72 @@ def analyze_and_draw_posture(img, pose_model, flip_h=True):
             p_c7 = (sh_px, sh_py)
             p_ear = (ear_px, ear_py)
 
-            # กำหนดสถานะและสีในรูปแบบ BGR: เขียว / ส้มเหลือง / แดง
+            # กำหนดสถานะและสีในระบบสี BGR: เขียว / ส้มเหลือง / แดง
             if cva_angle >= 50:
                 status_str, risk_str = "NORMAL (Good Posture)", "Risk: LOW"
                 color = (50, 220, 50)       # 🟢 เขียวสว่าง (BGR)
                 stat_val = "ปกติ (Normal)"
             elif cva_angle >= 40:
                 status_str, risk_str = "MILD FORWARD HEAD", "Risk: MODERATE"
-                color = (0, 185, 255)       # 🟡 ส้มอมเหลืองเตือนภัย (BGR)
+                color = (0, 185, 255)       # 🟡 ส้มอมเหลือง (BGR)
                 stat_val = "คอยื่นเล็กน้อย (Mild FHP)"
             else:
                 status_str, risk_str = "SEVERE FORWARD HEAD", "Risk: HIGH (Text Neck)"
-                color = (50, 50, 255)       # 🔴 แดงสว่างเตือนภัยขั้นวิกฤต (BGR)
+                color = (50, 50, 255)       # 🔴 แดงเตือนภัยขั้นวิกฤต (BGR)
                 stat_val = "คอยื่นรุนแรง (Severe FHP)"
 
-            # === ฝั่งซ้ายของ HUD: ผลวิเคราะห์ทางการแพทย์ (CVA ปรับสีตามระดับความรุนแรง) ===
+            # === ฝั่งซ้ายของ HUD: ผลตรวจวัดมุม (ตัวอักษรเปลี่ยนสีตามสภาวะความรุนแรง) ===
             put_crisp_text(img, f"CVA: {cva_angle:.1f} deg", (20, 38), cv2.FONT_HERSHEY_DUPLEX, 1.0, color, 2, shadow_thickness=4)
             put_crisp_text(img, status_str, (20, 74), cv2.FONT_HERSHEY_DUPLEX, 0.65, color, 2, shadow_thickness=3)
             put_crisp_text(img, risk_str, (20, 102), cv2.FONT_HERSHEY_SIMPLEX, 0.52, color, 1, shadow_thickness=3)
 
-            # === ฝั่งขวาของ HUD: ข้อมูลเวกเตอร์ 3D และทิศทาง ===
+            # === ฝั่งขวาของ HUD: พิกัดคณิตศาสตร์เวกเตอร์ ===
             right_x = mid_x + 20
             put_crisp_text(img, f"3D Vector v = [{dx}, {dy}, {dz}]", (right_x, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (56, 189, 248), 2, shadow_thickness=3)
             put_crisp_text(img, f"||v|| = {mag_3d} px", (right_x, 74), cv2.FONT_HERSHEY_SIMPLEX, 0.60, (241, 245, 249), 1, shadow_thickness=3)
             put_crisp_text(img, side_label, (right_x, 102), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (148, 163, 184), 1, shadow_thickness=3)
 
-            # === วาดแกนพิกัด X, Y, Z ที่จุด C7 ===
+            # === วาดแนวแกนพิกัดฉาก 3 มิติ (X, Y, Z) ที่จุดกำเนิด C7 ===
             axis_len = 80
             ax_x = (sh_px + int(axis_len * x_dir), sh_py)
             ax_y = (sh_px, sh_py - axis_len)
             ax_z = (sh_px - int(axis_len * 0.6 * x_dir), sh_py + int(axis_len * 0.4))
 
             cv2.arrowedLine(img, p_c7, ax_x, (80, 80, 240), 2, cv2.LINE_AA, tipLength=0.15)
-            put_crisp_text(img, "X", (ax_x[0] + 6 * x_dir, ax_x + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (80, 80, 240), 1)
+            put_crisp_text(img, "X", (ax_x[0] + 6 * x_dir, ax_x[1] + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (80, 80, 240), 1)
 
             cv2.arrowedLine(img, p_c7, ax_y, (80, 240, 80), 2, cv2.LINE_AA, tipLength=0.15)
-            put_crisp_text(img, "Y", (ax_y[0] - 16, ax_y - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (80, 240, 80), 1)
+            put_crisp_text(img, "Y", (ax_y[0] - 16, ax_y[1] - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (80, 240, 80), 1)
 
             cv2.arrowedLine(img, p_c7, ax_z, (240, 180, 60), 2, cv2.LINE_AA, tipLength=0.15)
-            put_crisp_text(img, "Z", (ax_z[0] - 16, ax_z + 16), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (240, 180, 60), 1)
+            put_crisp_text(img, "Z", (ax_z[0] - 16, ax_z[1] + 16), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (240, 180, 60), 1)
 
-            # เส้นประโปรเจกต์มิติ 3 มิติ
+            # เส้นประโปรเจกต์มิติสามมิติ
             p_floor = (ear_px, sh_py)
             draw_dashed_line(img, p_ear, p_floor, (220, 220, 220), 1, gap=5)
             draw_dashed_line(img, p_c7, p_floor, (140, 180, 220), 1, gap=5)
 
-            # เวกเตอร์ u (สีเขียวคมชัด)
+            # เวกเตอร์ฐาน u (สีเขียวสว่าง)
             ref_x = sh_px + (125 * x_dir)
             cv2.arrowedLine(img, p_c7, (ref_x, sh_py), (50, 220, 50), 3, cv2.LINE_AA, tipLength=0.15)
-            draw_badge_label(img, "u", (ref_x - (10 if x_dir > 0 else 55), sh_py + 26), text_color=(50, 220, 50), bg_color=(15, 23, 42), fontScale=0.45)
+            draw_badge_label(img, "u [1,0,0]", (ref_x - (10 if x_dir > 0 else 55), sh_py + 26), text_color=(50, 220, 50), bg_color=(15, 23, 42), fontScale=0.45)
 
-            # เวกเตอร์ v (สีทองคมชัด)
+            # เวกเตอร์คอ v (สีฟ้าน้ำทะเล)
             cv2.arrowedLine(img, p_c7, p_ear, (0, 215, 255), 4, cv2.LINE_AA, tipLength=0.12)
             draw_badge_label(img, f"v ({dx},{dy},{dz})", (ear_px + 12, ear_py), text_color=(0, 215, 255), bg_color=(15, 23, 42), fontScale=0.45)
 
-            # ส่วนโค้งมุม CVA (ใช้สีตามระดับความรุนแรง)
+            # ส่วนโค้งองศามุม CVA ปรับสีเปลี่ยนตามระดับความรุนแรงทางการแพทย์
             start_angle = 0 if x_dir > 0 else 180
             end_angle = -int(cva_angle) if x_dir > 0 else 180 + int(cva_angle)
             cv2.ellipse(img, p_c7, (45, 45), 0, start_angle, end_angle, color, 2, cv2.LINE_AA)
 
-            # จุด Marker C7, Ear และ Floor
+            # วาดจุดข้อต่อร่างกายหลัก
             cv2.circle(img, p_c7, 7, (0, 0, 255), -1, cv2.LINE_AA)
             cv2.circle(img, p_ear, 7, (255, 120, 0), -1, cv2.LINE_AA)
             cv2.circle(img, p_floor, 4, (180, 180, 180), -1, cv2.LINE_AA)
             
-            # ป้าย Badge จุดกำเนิด C7
-            draw_badge_label(img, "C7 Origin (0,0,0)", (p_c7[0] - 45, p_c7 + 34), text_color=(255, 255, 255), bg_color=(15, 23, 42), fontScale=0.42)
+            # ป้ายบอกตำแหน่งจุดกำเนิด C7
+            draw_badge_label(img, "C7 Origin (0,0,0)", (p_c7[0] - 45, p_c7[1] + 34), text_color=(255, 255, 255), bg_color=(15, 23, 42), fontScale=0.42)
 
         else:
             put_crisp_text(img, "Please turn side to camera clearly", (25, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 215, 255), 2, shadow_thickness=4)
@@ -329,7 +331,7 @@ def analyze_and_draw_posture(img, pose_model, flip_h=True):
 
     return img, cva_val, stat_val, vec_val, mag_val
 
-# 4. คลาส VideoProcessor สำหรับโหมด WebRTC (รองรับการตั้งค่ากลับภาพตามชนิดกล้อง)
+# 4. คลาส VideoProcessor สำหรับประมวลผลกล้องเรียลไทม์ WebRTC
 class VideoProcessor:
     def __init__(self):
         self.mp_pose = mp.solutions.pose
@@ -349,7 +351,7 @@ class VideoProcessor:
 
     def recv(self, frame):
         img = frame.to_ndarray(format="bgr24")
-        # สลับภาพเมื่อใช้กล้องหน้า (Front Cam) และลบขยะ RAM ทันที
+        # ส่งค่า is_front_cam เพื่อสลับ flip ทิศทางภาพเฉพาะเวลากล้องหน้าเท่านั้น
         img, cva_val, stat_val, vec_val, mag_val = analyze_and_draw_posture(img, self.pose, flip_h=self.is_front_cam)
 
         self.latest_frame = img.copy()
@@ -358,13 +360,14 @@ class VideoProcessor:
         self.latest_vec = vec_val
         self.latest_mag = mag_val
 
-        # สั่งระบบ Garbage Collector ล้างขยะหน่วยความจำสตรีมเฟรมทันที
+        # สั่งระบบ Python Garbage Collector ล้างขยะประมวลผลเฟรม เพื่อให้ RAM ว่างตลอดการใช้งาน
         del img
         gc.collect()
 
         return av.VideoFrame.from_ndarray(self.latest_frame, format="bgr24")
 
-# 5. การจัดวาง Layout แบ่ง 2 คอลัมน์col_cam, col_info = st.columns()
+# 5. การจัดวางปุ่มและกล้องแบ่งเป็น 2 ฝั่ง คอลัมน์ซ้าย และขวา
+col_cam, col_info = st.columns([3, 2])
 
 with col_cam:
     st.markdown("### 📸 ระบบรับภาพและคำนวณเวกเตอร์ 3D")
@@ -375,7 +378,8 @@ with col_cam:
     ])
 
     with tab_live:
-        col_cam_mode, col_cam_tip = st.columns()
+        # ระบบสลับสลับกล้องหน้า-หลัง
+        col_cam_mode, col_cam_tip = st.columns([1, 1])
         with col_cam_mode:
             cam_choice = st.radio(
                 "📷 เลือกกล้องที่ใช้งาน:",
@@ -383,7 +387,7 @@ with col_cam:
                 horizontal=True
             )
             is_front = (cam_choice == "กล้องหน้า (Front Camera)")
-            # จำกัดความละเอียดของกล้องสดเพื่อประหยัด RAM บนคลาวด์อย่างปลอดภัย
+            # ควบคุมและรีดขีดจำกัดกล้องให้พอดี เพื่อประหยัดแรมและสตรีมมิ่งผ่านคลาวด์ได้เสถียร
             video_constraints = {
                 "facingMode": "user" if is_front else {"exact": "environment"},
                 "width": {"ideal": 640},
@@ -392,7 +396,7 @@ with col_cam:
             }
 
         with col_cam_tip:
-            st.caption("💡 *หากเปลี่ยนกล้องแล้วภาพยังไม่สลับ ให้กดปุ่ม **STOP** แล้วกด **START** ใหม่อีกครั้งเพื่อรีเซ็ตเลนส์กล้องครับ*")
+            st.caption("💡 *หากเปลี่ยนกล้องแล้วภาพสลับช้าหรือนิ่ง ให้กดปุ่ม **STOP** แล้วกด **START** ใหม่อีกครั้งเพื่อเชื่อมเลนส์ครับ*")
 
         ctx = webrtc_streamer(
             key=f"neck-align-stream-{'front' if is_front else 'back'}",  
@@ -422,19 +426,19 @@ with col_cam:
                     st.session_state.active_vec = vp.latest_vec
                     st.session_state.active_cva = vp.latest_cva
                     
-                    # ควบคุมและจำกัดแกลเลอรีประวัติไม่ให้เกิน 3 รายการล่าสุดเพื่อประหยัด RAM
+                    # ควบคุมและจำกัดแกลเลอรีประวัติให้บันทึกไม่เกิน 3 ภาพล่าสุด เพื่อประหยัดหน่วยความจำ
                     if len(st.session_state.captured_records) > 3:
                         st.session_state.captured_records.pop()
                         
                     st.toast("✅ บันทึกภาพและจำลองแนวกระดูกคอ C1–C7 สำเร็จ!", icon="🦴")
-                    gc.collect() # บังคับล้างแรมหลังเซฟรูป
+                    gc.collect() # ล้าง RAM ขยะทันที
                 else:
-                    st.warning("⚠️ กล้องเปิดอยู่แต่ยังตรวจไม่พบมุมคอ กรุณาหันข้างเข้าหากล้องให้ชัดเจนครับ")
+                    st.warning("⚠️ กล้องเปิดอยู่แต่ยังตรวจไม่พบมุมคอ กรุณาหันข้างเข้าหากล้องให้ชัดเจน")
             else:
-                st.warning("⚠️ กรุณากดปุ่ม START เพื่อเปิดกล้องก่อนกดบันทึกภาพครับ")
+                st.warning("⚠️ กรุณากดปุ่ม START เพื่อเปิดกล้องก่อนกดบันทึกภาพ")
 
     with tab_upload:
-        st.info("💡 **วิธีใช้บน iPad:** กดปุ่ม **Browse files** ด้านล่าง -> เลือก **ถ่ายภาพ (Take Photo)** หรือ **คลังรูปภาพ (Photo Library)** เพื่อวิเคราะห์มุมคอทันทีโดยไม่ค้างครับ")
+        st.info("💡 **วิธีใช้บน iPad:** กดปุ่ม **Browse files** ด้านล่าง -> เลือก **ถ่ายภาพ (Take Photo)** หรือ **คลังรูปภาพ (Photo Library)** เพื่อวิเคราะห์มุมคอทันที")
         uploaded_file = st.file_uploader(
             "📤 กดปุ่มเพื่อถ่ายภาพจากกล้อง iPad หรือเลือกรูปภาพด้านข้างจากอัลบั้ม", 
             type=["jpg", "jpeg", "png", "webp"]
@@ -445,7 +449,7 @@ with col_cam:
             cv2_img = cv2.imdecode(bytes_data, cv2.IMREAD_COLOR)
             
             if cv2_img is not None:
-                # ลดความละเอียดของภาพนำเข้าสำหรับแท็บเล็ต/มือถือเหลือสูงสุด 800px เพื่อประหยัด RAM
+                # ย่อขนาดรูปถ่ายความละเอียดสูงจาก iPad ให้พอดีสูงสุด 800px เพื่อประหยัดแรมและสตรีมได้ไวขึ้น
                 max_dim = 800
                 h_orig, w_orig = cv2_img.shape[:2]
                 if max(h_orig, w_orig) > max_dim:
@@ -473,7 +477,7 @@ with col_cam:
                         }
                         st.session_state.captured_records.insert(0, record)
                         
-                        # ควบคุมและจำกัดแกลเลอรีประวัติสูงสุด 3 ภาพเพื่อประหยัด RAM
+                        # จำกัดประวัติไม่เกิน 3 ภาพล่าสุด เพื่อประหยัด RAM
                         if len(st.session_state.captured_records) > 3:
                             st.session_state.captured_records.pop()
                             
@@ -482,20 +486,20 @@ with col_cam:
                 else:
                     st.error("⚠️ ตรวจไม่พบจุดหูและไหล่ที่ชัดเจน กรุณาใช้ภาพถ่ายที่หันด้านข้างให้เห็นช่วงศีรษะและหัวไหล่ชัดเจนครับ")
                 
-                # ล้างตัวแปรหนัก ๆ เพื่อคืน RAM ให้เร็วที่สุด
+                # ล้างตัวแปรหนัก ๆ และสั่งให้ระบบทำลายคืนพื้นที่ทันที
                 del cv2_img
                 gc.collect()
 
-    # การแสดงผลแกลเลอรีประวัติ
+    # พื้นที่แสดงผลประวัติแกลเลอรีภาพเปรียบเทียบสรีระ
     if len(st.session_state.captured_records) > 0:
         st.markdown("---")
-        col_gal_title, col_gal_del = st.columns()
+        col_gal_title, col_gal_del = st.columns([3, 1])
         with col_gal_title:
-            st.markdown(f"#### 📋 ภาพที่บันทึกผล (แสดงสูงสุด {len(st.session_state.captured_records)} รายการล่าสุดเพื่อประหยัด RAM)")
+            st.markdown(f"#### 📋 ภาพที่บันทึกผล (แสดงสูงสุด {len(st.session_state.captured_records)} รายการล่าสุด)")
         with col_gal_del:
             if st.button("🗑️ ล้างประวัติ", use_container_width=True):
                 st.session_state.captured_records = []
-                st.cache_resource.clear() # เคลียร์แคชระบบเพื่อคืน RAM ทันที
+                st.cache_resource.clear() # ล้างแคชประมวลผลของโมเดลเพื่อคืน RAM
                 st.rerun()
 
         cols_snap = st.columns(min(len(st.session_state.captured_records), 2))
@@ -549,8 +553,8 @@ with col_advisors:
         st.markdown("#### 👨‍🏫 ครูที่ปรึกษาโครงงาน")
         st.markdown("""
         * 🔹 **นางสาวกัญจณ์วรา โนราช**
-        * 🔹 **นายก่อพงศ์ ภูมิภักดี**
+        * 🔹 **นายกฎพงศ์ ภูมิภักดี**
         """)
 
 with st.container(border=True):
-    st.markdown("<center>🏫 กลุ่มสาระการเรียนรู้คณิตศาสตร์ • โรงเรียนชัยภูมิภักดีชุมพล</center>", unsafe_allow_html=True)
+    st.markdown("<center>🏫 กลุ่มสาระการเรียนรู้คณิตศาสตร์ • <b>โรงเรียนชัยภูมิภักดีชุมพล</b></center>", unsafe_allow_html=True)
