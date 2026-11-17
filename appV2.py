@@ -552,8 +552,8 @@ with col_advisors:
     with st.container(border=True):
         st.markdown("#### 👨‍🏫 ครูที่ปรึกษาโครงงาน")
         st.markdown("""
-        1. 🔹 **นางสาวกัญจณ์วรา โนราช**
-        2. 🔹 **นายกฎพงศ์ ภูมิภักดี**
+        1. **นางสาวกัญจณ์วรา โนราช**
+        2. **นายกฎพงศ์ ภูมิภักดี**
         """)
 
 with st.container(border=True):
