@@ -171,7 +171,8 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # แถบพับเก็บข้อมูลคณะผู้จัดทำ
-
+with st.expander("🎓 ข้อมูลคณะผู้จัดทำและครูที่ปรึกษา (นักเรียนชั้น ม.5/13 โรงเรียนชัยภูมิภักดีชุมพล)", expanded=False):
+    exp_col1, exp_col2, exp_col3 = st.columns((2, 2, 2))
     with exp_col1:
         st.markdown("##### 👥 นักเรียนผู้จัดทำโครงงาน")
         st.markdown("""
