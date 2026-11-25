@@ -5,7 +5,7 @@ import mediapipe as mp
 import av
 import math
 import os
-import gc  # โมดูลเคลียร์หน่วยความจำ RAM ขยะ
+import gc
 from datetime import datetime
 import numpy as np
 import plotly.graph_objects as go
@@ -46,7 +46,7 @@ def get_static_pose_model():
         min_detection_confidence=0.4
     )
 
-# 2. ส่วนหัวหน้าเว็บและตราโรงเรียนcol_logo, col_title = st.columns()
+# 2. ส่วนหัวหน้าเว็บและตราโรงเรียน (แก้ไข st.columns ระบุสัดส่วน 1:6 ชัดเจน)col_logo, col_title = st.columns()
 with col_logo:
     if os.path.exists("logo.png"):
         st.image("logo.png", width=110)
@@ -108,7 +108,7 @@ def create_interactive_3d_spine_plot(vec, cva_angle):
         name="แนวกระดูกคอ (Cervical Alignment)"
     ))
 
-    # 2. ข้อกระดูกสันหลัง C1 ถึง C7 (Vertebrae Nodes)
+    # 2. ข้อกระดูกสันหลัง C1 ถึง C7
     colors = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#10b981', '#06b6d4']
     fig.add_trace(go.Scatter3d(
         x=sp_x, y=sp_y, z=sp_z,
@@ -120,7 +120,7 @@ def create_interactive_3d_spine_plot(vec, cva_angle):
         name="ข้อกระดูก C1 - C7"
     ))
 
-    # 3. เวกเตอร์ระนาบอ้างอิง u (แกนระนาบสีเขียว)
+    # 3. เวกเตอร์ระนาบอ้างอิง u
     fig.add_trace(go.Scatter3d(
         x=[0, u_len], y=[0, 0], z=[0, 0],
         mode='lines+text',
@@ -136,7 +136,7 @@ def create_interactive_3d_spine_plot(vec, cva_angle):
         showscale=False, sizemode="absolute", sizeref=12, anchor="tip", name="หัวลูกศร u"
     ))
 
-    # 4. เวกเตอร์กระดูกคอ v (เส้นแกนหลักสีทอง)
+    # 4. เวกเตอร์กระดูกคอ v
     fig.add_trace(go.Scatter3d(
         x=[0, dx], y=[0, dz], z=[0, dy],
         mode='lines',
@@ -176,12 +176,12 @@ def create_interactive_3d_spine_plot(vec, cva_angle):
     )
     return fig
 
-# ฟังก์ชันเขียนตัวหนังสือคมชัดสูง (มีเงาขอบดำลบรอยหยักด้วย cv2.LINE_AA)
+# ฟังก์ชันเขียนตัวหนังสือคมชัดสูง
 def put_crisp_text(img, text, org, fontFace, fontScale, color, thickness=1, shadow_color=(0, 0, 0), shadow_thickness=3):
     cv2.putText(img, text, org, fontFace, fontScale, shadow_color, shadow_thickness, cv2.LINE_AA)
     cv2.putText(img, text, org, fontFace, fontScale, color, thickness, cv2.LINE_AA)
 
-# ฟังก์ชันวาดป้ายข้อความพร้อมพื้นหลัง (Badge Label) เพื่อไม่ให้สีกลืนกับคน
+# ฟังก์ชันวาดป้ายข้อความพร้อมพื้นหลัง
 def draw_badge_label(img, text, org, text_color=(255, 255, 255), bg_color=(15, 23, 42), fontScale=0.48, thickness=1):
     font = cv2.FONT_HERSHEY_SIMPLEX
     (tw, th), baseline = cv2.getTextSize(text, font, fontScale, thickness)
@@ -204,10 +204,10 @@ def draw_dashed_line(img, pt1, pt2, color, thickness=1, gap=6):
         p2 = (int(pt1[0] + (pt2[0] - pt1[0]) * r2), int(pt1 + (pt2 - pt1) * r2))
         cv2.line(img, p1, p2, color, thickness, cv2.LINE_AA)
 
-# ฟังก์ชันกลางสำหรับประมวลผลภาพและวาด HUD คมชัดสูง (ปรับตามเกณฑ์ใหม่ 3 ระดับ)
+# ฟังก์ชันกลางสำหรับประมวลผลภาพและวาด HUD คมชัดสูง (3 ระดับตามเกณฑ์กำหนด)
 def analyze_and_draw_posture(img, pose_model, flip_h=True):
     if flip_h:
-        img = cv2.flip(img, 1)  # พลิกแนวนอนสำหรับสไตล์กระจกเงาเมื่อใช้กล้องหน้า
+        img = cv2.flip(img, 1)
     h, w, _ = img.shape
     rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     results = pose_model.process(rgb_img)
@@ -255,36 +255,36 @@ def analyze_and_draw_posture(img, pose_model, flip_h=True):
             p_c7 = (sh_px, sh_py)
             p_ear = (ear_px, ear_py)
 
-            # 🟢🟡🔴 ปรับประเมินผลตามเกณฑ์ตารางใหม่ (3 ระดับความรุนแรง)
-            if cva_angle >= 50.0:
+            # เกณฑ์ 3 ระดับ
+            if cva_angle > 53.0:
                 if cva_angle > 55.0:
-                    status_str, risk_str = "NORMAL (Good Posture)", "Severity: NONE"
-                    stat_val = "ปกติ (Normal)"
+                    status_str, risk_str = "EXCELLENT POSTURE", "Severity: NONE (Excellent)"
+                    stat_val = "ระดับปกติ (Normal/Excellent Posture)"
                 else:
-                    status_str, risk_str = "MILD SEVERITY", "Severity: MILD (50-55 deg)"
-                    stat_val = "ความรุนแรงน้อย (Mild)"
-                color = (50, 220, 50)       # 🟢 เขียวสว่าง (BGR)
+                    status_str, risk_str = "NORMAL POSTURE", "Severity: NONE (Normal)"
+                    stat_val = "ระดับปกติ (Normal Posture)"
+                color = (50, 220, 50)       # 🟢 เขียว
             elif cva_angle >= 45.0:
-                status_str, risk_str = "MODERATE SEVERITY", "Severity: MODERATE (45-49.9 deg)"
-                color = (0, 215, 255)        # 🟡 เหลืองสว่าง (BGR)
-                stat_val = "ความรุนแรงปานกลาง (Moderate)"
+                status_str, risk_str = "MODERATE SEVERITY", "Severity: MODERATE (45-52.9 deg)"
+                color = (0, 215, 255)        # 🟡 เหลือง
+                stat_val = "ภาวะคอยื่นระดับปานกลาง"
             else:
                 status_str, risk_str = "SEVERE FORWARD HEAD", "Severity: SEVERE (< 45 deg)"
-                color = (50, 50, 255)        # 🔴 แดงสว่างวิกฤต (BGR)
-                stat_val = "ความรุนแรงมาก (Severe)"
+                color = (50, 50, 255)        # 🔴 แดง
+                stat_val = "ภาวะคอยื่นระดับรุนแรง (Severe FHP)"
 
-            # === ฝั่งซ้ายของ HUD: ผลตรวจวัดมุม (ตัวอักษรเปลี่ยนสีตามสภาวะความรุนแรง) ===
+            # === ฝั่งซ้ายของ HUD ===
             put_crisp_text(img, f"CVA: {cva_angle:.1f} deg", (20, 38), cv2.FONT_HERSHEY_DUPLEX, 1.0, color, 2, shadow_thickness=4)
             put_crisp_text(img, status_str, (20, 74), cv2.FONT_HERSHEY_DUPLEX, 0.65, color, 2, shadow_thickness=3)
             put_crisp_text(img, risk_str, (20, 102), cv2.FONT_HERSHEY_SIMPLEX, 0.52, color, 1, shadow_thickness=3)
 
-            # === ฝั่งขวาของ HUD: พิกัดคณิตศาสตร์เวกเตอร์ ===
+            # === ฝั่งขวาของ HUD ===
             right_x = mid_x + 20
             put_crisp_text(img, f"3D Vector v = [{dx}, {dy}, {dz}]", (right_x, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (56, 189, 248), 2, shadow_thickness=3)
             put_crisp_text(img, f"||v|| = {mag_3d} px", (right_x, 74), cv2.FONT_HERSHEY_SIMPLEX, 0.60, (241, 245, 249), 1, shadow_thickness=3)
             put_crisp_text(img, side_label, (right_x, 102), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (148, 163, 184), 1, shadow_thickness=3)
 
-            # === วาดแนวแกนพิกัดฉาก 3 มิติ (X, Y, Z) ที่จุดกำเนิด C7 ===
+            # === วาดแนวแกนพิกัดฉาก 3 มิติ (X, Y, Z) ===
             axis_len = 80
             ax_x = (sh_px + int(axis_len * x_dir), sh_py)
             ax_y = (sh_px, sh_py - axis_len)
@@ -304,16 +304,16 @@ def analyze_and_draw_posture(img, pose_model, flip_h=True):
             draw_dashed_line(img, p_ear, p_floor, (220, 220, 220), 1, gap=5)
             draw_dashed_line(img, p_c7, p_floor, (140, 180, 220), 1, gap=5)
 
-            # เวกเตอร์ฐาน u (สีเขียวสว่าง)
+            # เวกเตอร์ฐาน u
             ref_x = sh_px + (125 * x_dir)
             cv2.arrowedLine(img, p_c7, (ref_x, sh_py), (50, 220, 50), 3, cv2.LINE_AA, tipLength=0.15)
             draw_badge_label(img, "u", (ref_x - (10 if x_dir > 0 else 55), sh_py + 26), text_color=(50, 220, 50), bg_color=(15, 23, 42), fontScale=0.45)
 
-            # เวกเตอร์คอ v (สีฟ้าน้ำทะเล)
+            # เวกเตอร์คอ v
             cv2.arrowedLine(img, p_c7, p_ear, (0, 215, 255), 4, cv2.LINE_AA, tipLength=0.12)
             draw_badge_label(img, f"v ({dx},{dy},{dz})", (ear_px + 12, ear_py), text_color=(0, 215, 255), bg_color=(15, 23, 42), fontScale=0.45)
 
-            # ส่วนโค้งองศามุม CVA ปรับสีเปลี่ยนตามระดับความรุนแรงทางการแพทย์
+            # ส่วนโค้งองศามุม CVA
             start_angle = 0 if x_dir > 0 else 180
             end_angle = -int(cva_angle) if x_dir > 0 else 180 + int(cva_angle)
             cv2.ellipse(img, p_c7, (45, 45), 0, start_angle, end_angle, color, 2, cv2.LINE_AA)
@@ -513,11 +513,11 @@ with col_info:
         fig_spine = create_interactive_3d_spine_plot(st.session_state.active_vec, st.session_state.active_cva)
         st.plotly_chart(fig_spine, use_container_width=True)
 
-    # 📊 เกณฑ์การประเมินทางการแพทย์ (CVA) 3 ระดับตามตารางล่าสุด
+    # 📊 เกณฑ์การประเมินทางการแพทย์ (CVA) 3 ระดับ
     st.markdown("### 📊 เกณฑ์การประเมินทางการแพทย์ (CVA)")
-    st.success("🟢 **50.0° - 55.0°: ความรุนแรงน้อย (Mild Severity)**\n\nแนวกระดูกคอยื่นตัวไปข้างหน้าในระดับเริ่มต้น (หากมากกว่า 55.0° ถือว่าสรีระปกติสมบูรณ์)")
-    st.warning("🟡 **45.0° - 49.9°: ความรุนแรงปานกลาง (Moderate Severity)**\n\nพบคอยื่นระดับปานกลาง กล้ามเนื้อสะบัก บ่า และคอเริ่มตึงตัว ควรเริ่มยืดเหยียด")
-    st.error("🔴 **ต่ำกว่า 45.0°: ความรุนแรงมาก (Severe)**\n\nพบคอยื่นระดับรุนแรง เสี่ยงต่อภาวะ Text Neck Syndrome และหมอนรองกระดูกคอรับภาระสูง")
+    st.success("🟢 **มากกว่า 53.0°: ระดับปกติ (Normal Posture)**\n\nแนวกระดูกคอเรียงตัวตามธรรมชาติ สมดุลสรีระดีเยี่ยม (หากมากกว่า 55.0° ถือว่าสรีระสมบูรณ์ดีเยี่ยม)")
+    st.warning("🟡 **45.0° - 52.9°: ภาวะคอยื่นระดับปานกลาง (Moderate Severity)**\n\nพบคอยื่นระดับปานกลาง กล้ามเนื้อสะบัก บ่า และคอเริ่มตึงตัว ควรเริ่มบริหารร่างกาย")
+    st.error("🔴 **ต่ำกว่า 45.0°: ภาวะคอยื่นระดับรุนแรง (Severe FHP / Text Neck)**\n\nพบคอยื่นระดับรุนแรง ศีรษะยื่นล้ำแนวไหล่อย่างชัดเจน กระดูกคอรับภาระน้ำหนักเสมือนสูง เสี่ยงต่อหมอนรองกระดูกคอทับเส้นประสาท")
 
 st.markdown("---")
 st.markdown("### 🎓 ข้อมูลโครงงานและคณะผู้จัดทำ")
