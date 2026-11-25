@@ -11,7 +11,7 @@ import numpy as np
 import plotly.graph_objects as go
 
 # 1. ตั้งค่าหน้าเว็บแบบ Wide
-st.set_page_config(page_title="Neck Align - ระบบวิเคราะห์มุมคอ 3D", page_icon="📐", layout="wide")
+st.set_page_config(page_title="Neck Align CB", page_icon="📐", layout="wide")
 
 st.markdown("""
     <style>
@@ -58,9 +58,10 @@ with col_logo:
 with col_title:
     st.markdown("""
         <div class="main-header">
-            <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>📐 โครงงานคณิตศาสตร์: Neck Align</h2>
+            <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>โปรแกรม Neck Align</h2>
             <p style='margin:6px 0 0 0; font-size:15px; color:#e0f2fe;'>
-                ระบบตรวจวัดและวิเคราะห์มุมกระดูกคอ (CVA) อัตโนมัติ พร้อม <b>การจำลองกระดูกสันหลังส่วนคอ C1–C7 ในปริภูมิ 3 มิติ</b>
+                โครงงานคณิตศาสตร์ เรื่อง การประยุกต์ใช้เวกเตอร์สามมิติและฟังก์ชันตรีโกณมิติ เพื่อพัฒนาโปรแกรมประเมินมุม CVA เพื่อสังเกตภาวะศีรษะยื่นไปข้างหน้า(FHP)
+                ระบบตรวจวัดและวิเคราะห์มุมกระดูกคอ (CVA) อัตโนมัติ พร้อมการจำลองกระดูกสันหลังส่วนคอ C1–C7 ในปริภูมิ 3 มิติ</b>
             </p>
         </div>
     """, unsafe_allow_html=True)
