@@ -5,106 +5,122 @@ import mediapipe as mp
 import av
 import math
 import os
-import gc  # โมดูลล้างขยะหน่วยความจำ RAM
+import gc
+import base64  # สำหรับฝังโลโก้ให้อยู่ในกรอบ HTML เดียวกัน 100%
 from datetime import datetime
 import numpy as np
 import plotly.graph_objects as go
 
-# 1. ตั้งค่าหน้าเว็บแบบ Wide และเซ็ตไอคอน
-st.set_page_config(page_title="Neck Align - ระบบวิเคราะห์มุมคอ 3D", page_icon="📐", layout="wide")
+# 1. ตั้งค่าหน้าเว็บแบบ Wide
+st.set_page_config(page_title="Neck Align CB - ระบบวิเคราะห์มุมคอ 3D", page_icon="📐", layout="wide")
 
 # =========================================================================
-# 1.1 CSS สไตล์ส่วนหัวพรีเมียม (Glassmorphism & Tech Gradient)
+# 1.1 CSS สไตล์ส่วนหัวพรีเมียม (รวมอยู่ในก้อน HTML เดียว ไม่หลุดกรอบ 100%)
 # =========================================================================
 st.markdown("""
     <style>
-    /* ซ่อนแถบ Padding ด้านบนสุดของ Streamlit เพื่อให้ Header ชิดสวยพอดี */
     .block-container {
         padding-top: 1.8rem;
         padding-bottom: 2rem;
     }
     
-    /* กล่อง Header หลักแบบ Glassmorphism สไตล์เทคโนโลยีการแพทย์ */
-    .hero-header {
-        background: linear-gradient(135deg, #090d16 0%, #0f172a 40%, #1e293b 100%);
-        border: 1px solid rgba(56, 189, 248, 0.25);
-        border-radius: 20px;
-        padding: 24px 30px;
-        margin-bottom: 22px;
-        box-shadow: 0 10px 30px -10px rgba(2, 132, 199, 0.3), 0 0 20px 0 rgba(56, 189, 248, 0.1);
+    .hero-card {
+        background: linear-gradient(135deg, #090d16 0%, #0f172a 45%, #1e293b 100%);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        border-radius: 22px;
+        padding: 26px 32px;
+        margin-bottom: 18px;
+        box-shadow: 0 12px 32px -10px rgba(2, 132, 199, 0.35), 0 0 20px 0 rgba(56, 189, 248, 0.1);
         position: relative;
         overflow: hidden;
+        display: flex;
+        align-items: center;
+        gap: 28px;
     }
     
-    /* เส้นแสงนีออนตกแต่งขอบบน */
-    .hero-header::before {
+    /* เส้นแสงนีออนไล่สีด้านบนกรอบ */
+    .hero-card::before {
         content: "";
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
-        height: 3px;
+        height: 4px;
         background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc);
     }
     
-    /* ป้าย Badge ด้านบนชื่อโครงงาน */
-    .project-badge {
-        display: inline-flex;
+    .hero-logo-box {
+        flex-shrink: 0;
+        width: 115px;
+        height: 115px;
+        display: flex;
         align-items: center;
-        gap: 6px;
-        background: rgba(56, 189, 248, 0.12);
-        border: 1px solid rgba(56, 189, 248, 0.35);
-        color: #38bdf8;
-        font-size: 13px;
-        font-weight: 600;
-        padding: 4px 14px;
-        border-radius: 9999px;
-        margin-bottom: 10px;
-        letter-spacing: 0.5px;
+        justify-content: center;
+        background: radial-gradient(circle, rgba(56, 189, 248, 0.18) 0%, rgba(15, 23, 42, 0.75) 75%);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 20px;
+        padding: 12px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
     }
     
-    /* ชื่อหัวข้อหลัก */
-    .hero-title {
-        color: #ffffff !important;
-        font-size: 32px !important;
+    .hero-logo-box img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+    
+    .hero-content {
+        flex-grow: 1;
+    }
+    
+    .hero-brand {
+        font-size: 34px !important;
         font-weight: 800 !important;
-        margin: 0 !important;
+        margin: 0 0 6px 0 !important;
         padding: 0 !important;
-        line-height: 1.25 !important;
-        letter-spacing: -0.5px;
-    }
-    
-    .hero-title span {
-        background: linear-gradient(90deg, #38bdf8 0%, #60a5fa 50%, #a78bfa 100%);
+        line-height: 1.2 !important;
+        background: linear-gradient(90deg, #38bdf8 0%, #60a5fa 45%, #c084fc 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        letter-spacing: -0.3px;
     }
-
-    /* คำอธิบายใต้ชื่อหัวข้อ */
+    
+    .hero-sub1 {
+        color: #f8fafc !important;
+        font-size: 18px !important;
+        font-weight: 700 !important;
+        margin: 0 0 4px 0 !important;
+        line-height: 1.4 !important;
+    }
+    
+    .hero-sub2 {
+        color: #7dd3fc !important;
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        margin: 0 0 10px 0 !important;
+        line-height: 1.4 !important;
+    }
+    
     .hero-desc {
-        color: #94a3b8 !important;
-        font-size: 15px !important;
-        margin-top: 8px !important;
-        margin-bottom: 0 !important;
+        color: #cbd5e1 !important;
+        font-size: 14.5px !important;
+        margin: 0 !important;
+        padding-top: 8px;
+        border-top: 1px solid rgba(148, 163, 184, 0.2);
         line-height: 1.5;
     }
     
     .hero-desc b {
-        color: #e2e8f0;
+        color: #38bdf8;
     }
     
-    /* กรอบรูปโลโก้ */
-    .logo-container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(15, 23, 42, 0.6) 70%);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 18px;
-        padding: 10px;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-        height: 100%;
-        min-height: 105px;
+    @media (max-width: 768px) {
+        .hero-card {
+            flex-direction: column;
+            text-align: center;
+            padding: 20px;
+            gap: 16px;
+        }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -116,7 +132,7 @@ if "active_vec" not in st.session_state:
     st.session_state.active_vec = list((75, 120, -20))
     st.session_state.active_cva = 55.0
 
-# โหลดโมเดล MediaPipe สำหรับภาพนิ่ง และแคชทรัพยากรไว้เพื่อลดการใช้ RAM บน Cloud
+# โหลดโมเดล MediaPipe สำหรับภาพนิ่ง
 @st.cache_resource(max_entries=1)
 def get_static_pose_model():
     return mp.solutions.pose.Pose(
@@ -125,68 +141,58 @@ def get_static_pose_model():
         min_detection_confidence=0.4
     )
 
+# ฟังก์ชันแปลงไฟล์ logo.png เป็น Base64 เพื่อฝังในกรอบ HTML เดียวกันโดยตรง
+def get_logo_html():
+    if os.path.exists("logo.png"):
+        with open("logo.png", "rb") as f:
+            b64_data = base64.b64encode(f.read()).decode("utf-8")
+        return f'<img src="data:image/png;base64,{b64_data}" alt="School Logo">'
+    return '<span style="font-size: 56px;">🏫</span>'
+
 # =========================================================================
-# 2. ส่วนหัวโครงงานพรีเมียม (Hero Section)
+# 2. ส่วนหัวโครงงานพรีเมียม (ฝังรวมใน HTML ก้อนเดียว กรอบตรงเป๊ะ 100%)
 # =========================================================================
-with st.container():
-    st.markdown("""
-        <div class="hero-header">
-            <div style="display: flex; align-items: center; gap: 24px;">
-    """, unsafe_allow_html=True)
-    
-    col_hero_logo, col_hero_text = st.columns((1, 6))
-    
-    with col_hero_logo:
-        if os.path.exists("logo.png"):
-            st.markdown('<div class="logo-container">', unsafe_allow_html=True)
-            st.image("logo.png", width=95)
-            st.markdown('</div>', unsafe_allow_html=True)
-        else:
-            st.markdown("""
-                <div class="logo-container">
-                    <span style="font-size: 55px;">🏫</span>
-                </div>
-            """, unsafe_allow_html=True)
-            
-    with col_hero_text:
-        st.markdown("""
-            <div>
-                <div class="project-badge">
-                    <span>📐</span> โครงงานคณิตศาสตร์ประยุกต์ • โรงเรียนชัยภูมิภักดีชุมพล
-                </div>
-                <h1 class="hero-title">Neck Align: <span>ระบบวิเคราะห์มุมคอ 3 มิติ</span></h1>
-                <p class="hero-desc">
-                    ระบบตรวจวัดและวิเคราะห์มุมกระดูกสันหลังส่วนคอ (CVA) อัตโนมัติด้วย <b>เวกเตอร์ 3 มิติ และฟังก์ชันตรีโกณมิติ</b> 
-                    พร้อมการจำลองแนวกระดูกคอ <b>C1–C7</b> แบบเรียลไทม์
-                </p>
+logo_html_str = get_logo_html()
+
+st.markdown(f"""
+    <div class="hero-card">
+        <div class="hero-logo-box">
+            {logo_html_str}
+        </div>
+        <div class="hero-content">
+            <div class="hero-brand">Neck Align CB</div>
+            <div class="hero-sub1">โครงงานคณิตศาสตร์ เรื่อง การประยุกต์ใช้เวกเตอร์สามมิติและฟังก์ชันตรีโกณมิติ</div>
+            <div class="hero-sub2">เพื่อพัฒนาโปรแกรมประเมินมุม CVA เพื่อสังเกตภาวะศีรษะยื่นไปข้างหน้า (FHP)</div>
+            <div class="hero-desc">
+                ระบบตรวจวัดและวิเคราะห์มุมกระดูกสันหลังส่วนคอ (CVA) อัตโนมัติด้วย <b>เวกเตอร์ 3 มิติ และฟังก์ชันตรีโกณมิติ</b> พร้อมการจำลองแนวกระดูกคอ <b>C1–C7</b> แบบเรียลไทม์
             </div>
-        """, unsafe_allow_html=True)
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
-    st.markdown("</div></div>", unsafe_allow_html=True)
-
-    # แถบพับเก็บข้อมูลคณะผู้จัดทำเพื่อความระเบียบเรียบร้อยสวยงาม
-    with st.expander("🎓 ข้อมูลคณะผู้จัดทำและครูที่ปรึกษา (นักเรียนชั้น ม.5/13)", expanded=False):
-        exp_col1, exp_col2, exp_col3 = st.columns((2, 2, 2))
-        with exp_col1:
-            st.markdown("##### 👥 นักเรียนผู้จัดทำโครงงาน")
-            st.markdown("""
-            1. **นางสาวทัดหทัย เดชหัสดิน** `ม.5/13`
-            2. **นายเมธาสิทธิ์ สัมฤทธิ์** `ม.5/13`
-            3. **นายปณพนธ์ วิระรังษิยากรณ์** `ม.5/13`
-            """)
-        with exp_col2:
-            st.markdown("##### 👨‍🏫 ครูที่ปรึกษาโครงงาน")
-            st.markdown("""
-            * 🔹 **นางสาวกัญจณ์วรา โนราช** *(ครูที่ปรึกษา)*
-            * 🔹 **นายก่อพงศ์ ภูมิภักดี** *(ครูที่ปรึกษา)*
-            """)
-        with exp_col3:
-            st.markdown("##### 🏫 สถานศึกษา")
-            st.markdown("""
-            * **กลุ่มสาระการเรียนรู้คณิตศาสตร์**
-            * โรงเรียนชัยภูมิภักดีชุมพล
-            * สพม.ชัยภูมิ
-            """)
+# แถบพับเก็บข้อมูลคณะผู้จัดทำ
+with st.expander("🎓 ข้อมูลคณะผู้จัดทำและครูที่ปรึกษา (นักเรียนชั้น ม.5/13 โรงเรียนชัยภูมิภักดีชุมพล)", expanded=False):
+    exp_col1, exp_col2, exp_col3 = st.columns((2, 2, 2))
+    with exp_col1:
+        st.markdown("##### 👥 นักเรียนผู้จัดทำโครงงาน")
+        st.markdown("""
+        1. **นางสาวทัดหทัย เดชหัสดิน** `ม.5/13`
+        2. **นายเมธาสิทธิ์ สัมฤทธิ์** `ม.5/13`
+        3. **นายปณพนธ์ วิระรังษิยากรณ์** `ม.5/13`
+        """)
+    with exp_col2:
+        st.markdown("##### 👨‍🏫 ครูที่ปรึกษาโครงงาน")
+        st.markdown("""
+        * 🔹 **นางสาวกัญจณ์วรา โนราช** *(ครูที่ปรึกษา)*
+        * 🔹 **นายก่อพงศ์ ภูมิภักดี** *(ครูที่ปรึกษา)*
+        """)
+    with exp_col3:
+        st.markdown("##### 🏫 สถานศึกษา")
+        st.markdown("""
+        * **กลุ่มสาระการเรียนรู้คณิตศาสตร์**
+        * โรงเรียนชัยภูมิภักดีชุมพล
+        * สพม.ชัยภูมิ
+        """)
 
 # 3. ฟังก์ชันคณิตศาสตร์และการจำลองกระดูกคอ C1–C7 ในรูปแบบ 3D
 def calculate_cva_angle(ear_x, ear_y, sh_x, sh_y):
@@ -330,7 +336,7 @@ def draw_dashed_line(img, pt1, pt2, color, thickness=1, gap=6):
         p2 = (int(x1 + (x2 - x1) * r2), int(y1 + (y2 - y1) * r2))
         cv2.line(img, p1, p2, color, thickness, cv2.LINE_AA)
 
-# ฟังก์ชันกลางสำหรับประมวลผลภาพและวาด HUD คมชัดสูง (ปรับตามเกณฑ์ใหม่ 3 ระดับ)
+# ฟังก์ชันกลางสำหรับประมวลผลภาพและวาด HUD คมชัดสูง (เกณฑ์ 3 ระดับ)
 def analyze_and_draw_posture(img, pose_model, flip_h=True):
     if flip_h:
         img = cv2.flip(img, 1)
@@ -381,19 +387,19 @@ def analyze_and_draw_posture(img, pose_model, flip_h=True):
             p_c7 = (sh_px, sh_py)
             p_ear = (ear_px, ear_py)
 
-            # 🟢🟡🔴 ปรับประเมินผลตามเกณฑ์ตารางใหม่ (3 ระดับ)
-            if cva_angle >= 53.0:
+            # 🟢🟡🔴 เกณฑ์การประเมินทางการแพทย์ 3 ระดับ
+            if cva_angle > 53.0:
                 if cva_angle > 55.0:
                     status_str, risk_str = "EXCELLENT POSTURE", "Severity: NONE (Excellent)"
                     stat_val = "ระดับปกติ (Normal/Excellent Posture)"
                 else:
-                    status_str, risk_str = "NORMAL POSTURE", "Severity: NONE (Normal)"
+                    status_str, risk_str = "NORMAL POSTURE", "Severity: NONE (> 53 deg)"
                     stat_val = "ระดับปกติ (Normal Posture)"
                 color = (50, 220, 50)       # 🟢 เขียว
             elif cva_angle >= 45.0:
                 status_str, risk_str = "MODERATE SEVERITY", "Severity: MODERATE (45-52.9 deg)"
                 color = (0, 215, 255)        # 🟡 เหลือง
-                stat_val = "ภาวะคอยื่นระดับปานกลาง"
+                stat_val = "ภาวะคอยื่นระดับปานกลาง (Moderate)"
             else:
                 status_str, risk_str = "SEVERE FORWARD HEAD", "Severity: SEVERE (< 45 deg)"
                 color = (50, 50, 255)        # 🔴 แดง
@@ -641,9 +647,9 @@ with col_info:
 
     # 📊 เกณฑ์การประเมินทางการแพทย์ (CVA) 3 ระดับตามตารางล่าสุด
     st.markdown("### 📊 เกณฑ์การประเมินทางการแพทย์ (CVA)")
-    st.success("🟢 **มากกว่า 53.0°: ระดับปกติ (Normal Posture)**\n\nแนวกระดูกคอเรียงตัวตามธรรมชาติ สมดุลสรีระดีเยี่ยม (หากได้มุมมากกว่า 55° จะถือเป็นเกณฑ์สรีระปกติสมบูรณ์ หรือ Normal/Excellent Posture)")
-    st.warning("🟡 **ภาวะคอยื่นระดับปานกลาง (Moderate Severity): 45.0° - 52.9°**\n\nพบคอยื่นระดับปานกลาง กล้ามเนื้อสะบัก บ่า และคอเริ่มตึงตัว ควรเริ่มบริหารยืดเหยียดกล้ามเนื้อ")
-    st.error("🔴 **ภาวะคอยื่นระดับรุนแรง (Severe FHP / Text Neck): < 45.0°**\n\nพบคอยื่นระดับรุนแรง ศีรษะยื่นล้ำแนวไหล่อย่างชัดเจน กระดูกคอรับภาระน้ำหนักเสมือนสูง เสี่ยงต่อหมอนรองกระดูกคอเสื่อม")
+    st.success("🟢 **ระดับปกติ (Normal Posture): > 53°**\n\nแนวกระดูกคอเรียงตัวตามธรรมชาติ สมดุลสรีระดีเยี่ยม (หากได้มุมมากกว่า 55° จะถือเป็นเกณฑ์สรีระปกติสมบูรณ์ หรือ Normal/Excellent Posture)")
+    st.warning("🟡 **ภาวะคอยื่นระดับปานกลาง (Moderate Severity): 45° - 52.9°**\n\nพบคอยื่นระดับปานกลาง กล้ามเนื้อสะบัก บ่า และคอเริ่มตึงตัว ควรเริ่มบริหารยืดเหยียดกล้ามเนื้อ")
+    st.error("🔴 **ภาวะคอยื่นระดับรุนแรง (Severe FHP / Text Neck): < 45°**\n\nพบคอยื่นระดับรุนแรง ศีรษะยื่นล้ำแนวไหล่อย่างชัดเจน กระดูกคอรับภาระน้ำหนักเสมือนสูง เสี่ยงต่อหมอนรองกระดูกคอเสื่อม")
 
 st.markdown("---")
 st.markdown("### 🎓 ข้อมูลโครงงานและคณะผู้จัดทำ")
