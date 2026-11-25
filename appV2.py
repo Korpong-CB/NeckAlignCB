@@ -59,8 +59,8 @@ with col_title:
     st.markdown("""
         <div class="main-header">
             <h2 style='margin:0; font-weight:800; letter-spacing: 0.5px;'>Neck Align CB</h2>
-            <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>โครงงานคณิตศาสตร์ เรื่อง การประยุกต์ใช้เวกเตอร์สามมิติและฟังก์ชันตรีโกณมิติ</h2>
-            <h2 style='margin:0; font-weight:700; letter-spacing: 0.5px;'>เพื่อพัฒนาโปรแกรมประเมินมุม CVA เพื่อสังเกตภาวะศีรษะยื่นไปข้างหน้า(FHP)</h2>
+            <h2 style='margin:0; font-weight:500; letter-spacing: 0.5px;'>โครงงานคณิตศาสตร์ เรื่อง การประยุกต์ใช้เวกเตอร์สามมิติและฟังก์ชันตรีโกณมิติ</h2>
+            <h2 style='margin:0; font-weight:500; letter-spacing: 0.5px;'>เพื่อพัฒนาโปรแกรมประเมินมุม CVA เพื่อสังเกตภาวะศีรษะยื่นไปข้างหน้า(FHP)</h2>
             <p style='margin:6px 0 0 0; font-size:15px; color:#e0f2fe;'>
                 ระบบตรวจวัดและวิเคราะห์มุมกระดูกคอ (CVA) อัตโนมัติ พร้อมการจำลองกระดูกสันหลังส่วนคอ C1–C7 ในปริภูมิ 3 มิติ
             </p>
